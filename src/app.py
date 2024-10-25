@@ -360,13 +360,18 @@ def get_assistant_response(prompt: str, history: List[Dict], include_web_search:
                 break
             elif last_message.type == "tool_use":
                 # Process tool use request
-                tool_name = last_message.tool_name
-                tool_args = last_message.tool_input
+                tool_name = last_message.tool_use.tool_name
+                tool_args = last_message.tool_use.parameters
                 
-            # Process each tool call
-            for tool_call in last_message.tool_calls:
-                tool_name = tool_call.name
-                tool_args = tool_call.arguments
+                # Execute the tool
+                tool_result = execute_tool(tool_name, tool_args)
+                
+                # Add the tool result to messages
+                messages.append({
+                    "role": "tool",
+                    "content": tool_result,
+                    "tool_call_id": last_message.tool_use.id
+                })
                 
                 # Execute the tool
                 tool_result = execute_tool(tool_name, json.loads(tool_args))
