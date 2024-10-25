@@ -488,7 +488,6 @@ def get_assistant_response(
     include_web_search: bool = True,
     progress_callback=None,
 ):
-    tool_counter = ToolUsageCounter()
     """Get response from Claude API with memory and web search integration"""
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
@@ -672,8 +671,10 @@ with col1:
 
                 # Clear previous progress updates
                 st.session_state.progress_updates = []
+                # Initialize tool counter
+                tool_counter = ToolUsageCounter()
 
-                def progress_callback(action, details=None):
+                def progress_callback(action, details=None, counter=tool_counter):
                     update = {
                         "action": f"🔄 {action}",
                         "timestamp": datetime.now().isoformat(),
