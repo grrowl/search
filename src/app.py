@@ -3,7 +3,7 @@ from anthropic import Anthropic
 import json
 from datetime import datetime
 import os
-from duckduckgo_search import ddg
+from duckduckgo_search import DDGS
 import tiktoken
 from typing import List, Dict
 import pandas as pd
@@ -96,7 +96,8 @@ class MemoryManager:
 def perform_web_search(query: str, num_results: int = 3) -> str:
     """Perform web search using DuckDuckGo"""
     try:
-        results = ddg(query, max_results=num_results)
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=num_results))
         formatted_results = []
 
         for result in results:
@@ -118,6 +119,10 @@ if "memory_manager" not in st.session_state:
 # Initialize session state for chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+# Initialize web search toggle state
+if "include_web_search" not in st.session_state:
+    st.session_state.include_web_search = True
 
 
 def display_memories():
@@ -174,8 +179,6 @@ def get_assistant_response(
     prompt: str, history: List[Dict], include_web_search: bool = True
 ):
     """Get response from Claude API with memory and web search integration"""
-    messages = []
-
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
 
@@ -184,7 +187,7 @@ def get_assistant_response(
     if include_web_search:
         web_search_results = perform_web_search(prompt)
 
-    # Construct system message with context
+    # Construct system message
     system_message = """You are a helpful AI assistant with access to memory and web search capabilities.
     Please provide informative responses while maintaining a natural conversational style."""
 
@@ -196,28 +199,28 @@ def get_assistant_response(
     if web_search_results:
         system_message += "\n\nRecent web search results:\n" + web_search_results
 
-    messages.append({"role": "system", "content": system_message})
-
-    # Add historical context
+    # Build messages array
+    messages = []
     for msg in history:
         role = "assistant" if msg["role"] == "assistant" else "user"
         messages.append({"role": role, "content": msg["content"]})
-
-    # Add current prompt
     messages.append({"role": "user", "content": prompt})
 
     try:
         response = anthropic.messages.create(
-            model="claude-3-opus-20240229", max_tokens=4000, messages=messages
+            model="claude-3-opus-20240229",
+            max_tokens=4000,
+            system=system_message,
+            messages=messages,
         )
 
         # Store important information in memory
         st.session_state.memory_manager.add_memory(
-            f"User asked: {prompt}\nAssistant responded: {response.content[0].text}",
+            f"User asked: {prompt}\nAssistant responded: {response.content[0].value}",
             importance=1.0,
         )
 
-        return response.content[0].text
+        return response.content[0].value
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -225,50 +228,54 @@ def get_assistant_response(
 # Page config
 st.set_page_config(page_title="Claude Chat", page_icon="🤖", layout="wide")
 
-# Create two columns for main chat and memory display
+# Main chat interface
+st.title("Claude Chat Assistant")
+
+# Load existing chat history
+if not st.session_state.messages:
+    st.session_state.messages = load_chat_history()
+
+# Chat input before columns
+if prompt := st.chat_input("What would you like to know?"):
+    # Display user message
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Add user message to state
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # Get and display assistant response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = get_assistant_response(
+                prompt,
+                st.session_state.messages[:-1],
+                st.session_state.include_web_search,
+            )
+            st.markdown(response)
+
+    # Add assistant response to state
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+    # Save updated chat history
+    save_chat_history(st.session_state.messages)
+
+# Create two columns for chat history and memory display
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    # Main chat interface
-    st.title("Claude Chat Assistant")
-
-    # Load existing chat history
-    if not st.session_state.messages:
-        st.session_state.messages = load_chat_history()
-
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Chat input
-    if prompt := st.chat_input("What would you like to know?"):
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # Add user message to state
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        # Get and display assistant response
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response = get_assistant_response(
-                    prompt, st.session_state.messages[:-1], include_web_search
-                )
-                st.markdown(response)
-
-        # Add assistant response to state
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
-        # Save updated chat history
-        save_chat_history(st.session_state.messages)
-
 with col2:
     # Sidebar controls
     st.title("Settings")
 
-    include_web_search = st.checkbox("Enable Web Search", value=True)
+    st.session_state.include_web_search = st.checkbox(
+        "Enable Web Search", value=st.session_state.include_web_search
+    )
 
     st.subheader("Memory Management")
     if st.button("Clear All Memories"):
