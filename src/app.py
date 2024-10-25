@@ -117,48 +117,41 @@ def get_search_tools():
     tools = [
         {
             "name": "visit",
-            "description": """Read a webpage's content.
-            Returns clean, readable text.
+            "description": """Read a webpage's content. Returns clean, readable text.
             Optional prompt to extract specific details.""",
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "Webpage URL to read"
-                    },
+                    "url": {"type": "string", "description": "Webpage URL to read"},
                     "prompt": {
                         "type": "string",
-                        "description": "Optional: what specific information to find",
-                    }
+                        "description": "Optional: describe the specific information to extract from the webpage",
+                    },
                 },
-                "required": ["url"]
-            }
+                "required": ["url"],
+            },
         },
         {
             "name": "search",
-            "description": """Find information across the web.
-            Returns titles, snippets and links.
-            Best for general knowledge and recent events.
-            Not suitable for real-time data.""",
+            "description": """Find information across the web. Returns titles, snippets and links. Use to research real-time and up-to-date information from anywhere on the internet.""",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The search query to send to DuckDuckGo. Should be specific and focused on the information needed."
+                        "description": "The search query to send to DuckDuckGo. Should be specific and focused on the information needed.",
                     },
                     "num_results": {
                         "type": "integer",
                         "description": "Number of search results to return (default 3, max 10)",
                         "default": 3,
                         "minimum": 1,
-                        "maximum": 10
+                        "maximum": 10,
                     },
                 },
                 "required": ["query"],
             },
-        }
+        },
     ]
 
     if os.getenv("SERPAPI_KEY"):
@@ -169,7 +162,10 @@ def get_search_tools():
                 "input_schema": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "What to search for"},
+                        "query": {
+                            "type": "string",
+                            "description": "What to search for",
+                        },
                         "num_results": {
                             "type": "integer",
                             "description": "How many results (default 3)",
@@ -263,31 +259,29 @@ def execute_firecrawl(url: str, prompt: str = None) -> str:
     """Execute a Firecrawl web extraction"""
     try:
         from firecrawl import FirecrawlApp
+
         app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
-        
-        params = {
-            'formats': ['markdown']
-        }
-        
+
+        params = {"formats": ["markdown"]}
+
         if prompt:
-            params['formats'].append('extract')
-            params['extract'] = {
-                'prompt': prompt
-            }
-            
+            params["formats"].append("extract")
+            params["extract"] = {"prompt": prompt}
+
         result = app.scrape_url(url, params=params)
-        
+
         # Return markdown content by default
-        content = result.get('markdown', '')
-        
+        content = result.get("markdown", "")
+
         # If extraction was requested, append it to the content
-        if prompt and 'extract' in result:
-            content += "\n\nExtracted Information:\n" + str(result['extract'])
-            
+        if prompt and "extract" in result:
+            content += "\n\nExtracted Information:\n" + str(result["extract"])
+
         return content
     except Exception as e:
         st.error(f"Firecrawl error: {str(e)}")
         return "Unable to extract webpage content at this time."
+
 
 def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute the requested tool with the given input"""
@@ -295,19 +289,13 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
         # Validate required parameters
         if tool_name == "visit":
             if "url" not in tool_args:
-                return {
-                    "error": "Missing required 'url' parameter",
-                    "is_error": True
-                }
+                return {"error": "Missing required 'url' parameter", "is_error": True}
             return execute_firecrawl(tool_args["url"], tool_args.get("prompt"))
-            
+
         elif tool_name in ["search", "google_search"]:
             if "query" not in tool_args:
-                return {
-                    "error": "Missing required 'query' parameter",
-                    "is_error": True
-                }
-            
+                return {"error": "Missing required 'query' parameter", "is_error": True}
+
             # Validate and constrain num_results
             num_results = min(max(tool_args.get("num_results", 3), 1), 10)
             query = tool_args["query"]
@@ -318,7 +306,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                 except Exception as e:
                     return {
                         "error": f"DuckDuckGo search failed: {str(e)}",
-                        "is_error": True
+                        "is_error": True,
                     }
             elif tool_name == "serpapi_search":
                 try:
@@ -326,20 +314,14 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                 except Exception as e:
                     return {
                         "error": f"SerpAPI search failed: {str(e)}",
-                        "is_error": True
+                        "is_error": True,
                     }
         else:
-            return {
-                "error": f"Unknown tool '{tool_name}'",
-                "is_error": True
-            }
+            return {"error": f"Unknown tool '{tool_name}'", "is_error": True}
 
     except Exception as e:
         st.error(f"Tool execution error: {str(e)}")
-        return {
-            "error": f"Error executing {tool_name}: {str(e)}",
-            "is_error": True
-        }
+        return {"error": f"Error executing {tool_name}: {str(e)}", "is_error": True}
 
 
 # Initialize memory manager
@@ -402,8 +384,10 @@ def save_chat_history(messages):
 
 
 def get_assistant_response(
-    prompt: str, history: List[Dict], include_web_search: bool = True, 
-    progress_callback=None
+    prompt: str,
+    history: List[Dict],
+    include_web_search: bool = True,
+    progress_callback=None,
 ):
     """Get response from Claude API with memory and web search integration"""
     # Get relevant memories
@@ -438,7 +422,7 @@ def get_assistant_response(
         # Make initial request to Claude
         if progress_callback:
             progress_callback("Making initial request to Claude")
-            
+
         message = anthropic.messages.create(
             model="claude-3-sonnet-20240229",
             max_tokens=4000,
@@ -450,33 +434,40 @@ def get_assistant_response(
 
         if message.stop_reason == "tool_use":
             # Get the tool use block
-            tool_use = next(block for block in message.content if block.type == "tool_use")
+            tool_use = next(
+                block for block in message.content if block.type == "tool_use"
+            )
             tool_name = tool_use.name
             tool_args = tool_use.input
 
             # Execute the tool
             if progress_callback:
                 progress_callback(f"Executing tool: {tool_name}", tool_args)
-            
+
             tool_result = execute_tool(tool_name, tool_args)
-            
+
             if progress_callback:
                 progress_callback("Tool execution complete", tool_result)
-            
+
             # Convert tool result to string if it's a dict
             if isinstance(tool_result, dict):
                 tool_result = json.dumps(tool_result)
 
             # Make follow-up request with tool result
             if progress_callback:
-                progress_callback("Making follow-up request to Claude with tool results")
-                
+                progress_callback(
+                    "Making follow-up request to Claude with tool results"
+                )
+
             response = anthropic.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=4000,
                 messages=[
                     *messages,  # Original messages
-                    {"role": "assistant", "content": message.content},  # Claude's first response
+                    {
+                        "role": "assistant",
+                        "content": message.content,
+                    },  # Claude's first response
                     {
                         "role": "user",
                         "content": [
@@ -565,18 +556,18 @@ with col1:
                 progress_expander = st.expander("View Progress", expanded=False)
                 with progress_expander:
                     progress_placeholder = st.empty()
-                
+
                 def progress_callback(action, details=None):
                     with progress_placeholder.container():
                         st.write(f"🔄 {action}")
                         if details:
                             st.code(details, language="json")
-                
+
                 response = get_assistant_response(
                     prompt,
                     st.session_state.messages[:-1],
                     st.session_state.include_web_search,
-                    progress_callback
+                    progress_callback,
                 )
                 response_placeholder.markdown(response)
 
