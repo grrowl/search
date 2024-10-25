@@ -124,7 +124,7 @@ def get_search_tools():
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["store", "update", "search"],
+                        "enum": ["store", "update"],
                         "description": "Action to perform on memories",
                     },
                     "content": {
@@ -354,15 +354,6 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                         return f"Memory {memory_id} updated"
                 return f"Memory {memory_id} not found"
 
-            elif action == "search":
-                matches = []
-                for memory in st.session_state.memory_manager.memories:
-                    if content.lower() in memory["content"].lower():
-                        matches.append(
-                            f"ID {memory['id']}: {memory['content']} "
-                            f"(importance: {memory['importance']})"
-                        )
-                return "\n\n".join(matches) if matches else "No matching memories found"
 
             return {"error": f"Unknown memory action: {action}", "is_error": True}
 
