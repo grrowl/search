@@ -354,10 +354,14 @@ def get_assistant_response(prompt: str, history: List[Dict], include_web_search:
             # Check if the last message contains a tool call
             last_message = response.content[-1]
             
-            if not hasattr(last_message, 'tool_calls') or not last_message.tool_calls:
-                # No tool calls, return the final response
-                final_response = last_message.value
+            if last_message.type == "text":
+                # No tool calls, return the final text response
+                final_response = last_message.text
                 break
+            elif last_message.type == "tool_use":
+                # Process tool use request
+                tool_name = last_message.tool_name
+                tool_args = last_message.tool_input
                 
             # Process each tool call
             for tool_call in last_message.tool_calls:
