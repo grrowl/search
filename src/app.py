@@ -116,37 +116,31 @@ def get_search_tools():
     """Get the available search tools based on configuration"""
     tools = [
         {
-            "name": "firecrawl",
-            "description": """Extract content from web pages using Firecrawl.
-            This tool converts web pages into clean, markdown-formatted text ideal for LLM processing.
-            Use without a prompt parameter to get the full page content as markdown.
-            Include a prompt parameter to extract specific information using LLM-powered extraction.
-            The tool handles dynamic content, JavaScript-rendered sites, and complex web pages automatically.
-            Returns cleaned, readable text content optimized for AI processing.""",
+            "name": "visit",
+            "description": """Read a webpage's content.
+            Returns clean, readable text.
+            Optional prompt to extract specific details.""",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "url": {
                         "type": "string",
-                        "description": "The URL of the webpage to crawl"
+                        "description": "Webpage URL to read"
                     },
                     "prompt": {
                         "type": "string",
-                        "description": "Optional prompt to target specific information from the page",
+                        "description": "Optional: what specific information to find",
                     }
                 },
                 "required": ["url"]
             }
         },
         {
-            "name": "duckduckgo_search",
-            "description": """Search the web using DuckDuckGo to find current information about topics.
-            This tool performs a text search and returns multiple results from across the web.
-            Each result includes a title, URL, description snippet, and publication date if available.
-            Use this tool when you need to find factual information, news, or general web content.
-            The results are from public web pages indexed by DuckDuckGo.
-            Results are sorted by relevance but may not be completely up to date.
-            Do not use this tool for queries requiring real-time data like current weather or stock prices.""",
+            "name": "search",
+            "description": """Find information across the web.
+            Returns titles, snippets and links.
+            Best for general knowledge and recent events.
+            Not suitable for real-time data.""",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -170,15 +164,15 @@ def get_search_tools():
     if os.getenv("SERPAPI_KEY"):
         tools.append(
             {
-                "name": "serpapi_search",
-                "description": "Search the web using Google (via SerpAPI). Use this to find current information about topics.",
+                "name": "google_search",
+                "description": "Search Google for current information.",
                 "input_schema": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "The search query"},
+                        "query": {"type": "string", "description": "What to search for"},
                         "num_results": {
                             "type": "integer",
-                            "description": "Number of results to return (default 3)",
+                            "description": "How many results (default 3)",
                             "default": 3,
                         },
                     },
@@ -299,7 +293,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute the requested tool with the given input"""
     try:
         # Validate required parameters
-        if tool_name == "firecrawl":
+        if tool_name == "visit":
             if "url" not in tool_args:
                 return {
                     "error": "Missing required 'url' parameter",
@@ -307,7 +301,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                 }
             return execute_firecrawl(tool_args["url"], tool_args.get("prompt"))
             
-        elif tool_name in ["duckduckgo_search", "serpapi_search"]:
+        elif tool_name in ["search", "google_search"]:
             if "query" not in tool_args:
                 return {
                     "error": "Missing required 'query' parameter",
@@ -416,16 +410,10 @@ def get_assistant_response(
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
 
     # Construct system message with context and chain-of-thought prompting
-    system_message = """You are a helpful AI assistant with access to memory and web search capabilities.
-    When answering questions that require current information, use the search tools available to you.
-    Always cite the sources from search results when you use them in your response.
-    Please provide informative responses while maintaining a natural conversational style.
-    
-    Before using any tool, explain your reasoning within <thinking></thinking> tags:
-    1. Analyze which tool would be most appropriate for the query
-    2. Check if you have all required parameters or can reasonably infer them
-    3. If any required parameters are missing, ask the user instead of guessing
-    4. Only proceed with the tool call if you have all needed information"""
+    system_message = """You are a helpful AI assistant with memory and web access.
+    Use <thinking></thinking> tags to explain your tool choices.
+    Ask for clarification if needed.
+    Always cite your sources."""
 
     if relevant_memories:
         system_message += (
