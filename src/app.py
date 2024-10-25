@@ -452,12 +452,43 @@ def save_chat_history(messages):
         json.dump(messages, f)
 
 
+class ToolUsageCounter:
+    def __init__(self):
+        self.reset()
+    
+    def reset(self):
+        self.thought_count = 0
+        self.search_count = 0
+        self.visit_count = 0
+        
+    def count_tool(self, tool_name: str):
+        if tool_name in ['search', 'google_search']:
+            self.search_count += 1
+        elif tool_name == 'visit':
+            self.visit_count += 1
+        self.thought_count += 1
+    
+    def get_summary(self) -> str:
+        parts = []
+        if self.thought_count > 0:
+            parts.append(f"Thought {self.thought_count} times")
+        if self.search_count > 0:
+            parts.append(f"performed {self.search_count} search{'' if self.search_count == 1 else 'es'}")
+        if self.visit_count > 0:
+            parts.append(f"made {self.visit_count} visit{'' if self.visit_count == 1 else 's'}")
+        
+        if not parts:
+            return "No tools used"
+            
+        return ", ".join(parts)
+
 def get_assistant_response(
     prompt: str,
     history: List[Dict],
     include_web_search: bool = True,
     progress_callback=None,
 ):
+    tool_counter = ToolUsageCounter()
     """Get response from Claude API with memory and web search integration"""
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
@@ -527,6 +558,7 @@ Take multiple turns with tools to:
             tool_use = next(block for block in response.content if block.type == "tool_use")
             tool_name = tool_use.name
             tool_args = tool_use.input
+            tool_counter.count_tool(tool_name)
 
             # Execute the tool
             if progress_callback:
@@ -635,6 +667,7 @@ with col1:
             with st.spinner("Thinking..."):
                 progress_expander = st.expander("View Progress", expanded=False)
                 with progress_expander:
+                    summary_placeholder = st.empty()
                     progress_placeholder = st.empty()
 
                 # Clear previous progress updates
@@ -649,8 +682,11 @@ with col1:
                         update["details"] = details
                     st.session_state.progress_updates.append(update)
 
-                    # Display all updates in chronological order
+                    # Display summary and updates
                     with progress_placeholder.container():
+                        summary = tool_counter.get_summary()
+                        summary_placeholder.markdown(f"**Summary:** {summary}")
+                        st.markdown("---")
                         for update in st.session_state.progress_updates:
                             st.write(update["action"])
                             if "details" in update:
