@@ -377,13 +377,14 @@ def get_assistant_response(prompt: str, history: List[Dict], include_web_search:
                 tool_result = execute_tool(tool_name, json.loads(tool_args))
                 
                 # Add the tool result to messages
+                # Execute the tool and continue the conversation
+                tool_result = execute_tool(tool_name, tool_args)
+                
+                # Add the tool result to messages
                 messages.append({
-                    "role": "assistant",
-                    "content": [{
-                        "type": "tool_response",
-                        "tool_call_id": tool_call.id,
-                        "output": tool_result
-                    }]
+                    "role": "tool",
+                    "content": tool_result,
+                    "tool_call_id": last_message.tool_use.id
                 })
             
             # Get next response from Claude with tool results
