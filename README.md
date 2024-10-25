@@ -4,9 +4,10 @@ A Streamlit-based chat application that uses Claude AI, with memory management a
 
 ## Features
 
-- Conversational AI powered by Claude 3 Opus
+- Conversational AI powered by Claude 3 Sonnet
 - Persistent memory system with importance scoring
-- Web search integration via DuckDuckGo
+- Web search integration via DuckDuckGo or Google (SerpAPI)
+- Web content extraction via Firecrawl
 - Voting system for memory importance
 - Chat history persistence
 - Clean, intuitive UI with Streamlit
@@ -28,6 +29,8 @@ pip install -r requirements.txt
 - Create a `.env` file with your API keys:
 ```
 ANTHROPIC_API_KEY=your_api_key_here
+SERPAPI_KEY=optional_serpapi_key_here    # Optional: Enable Google search
+FIRECRAWL_API_KEY=optional_key_here      # Optional: Enable web extraction
 ```
 
 ## Project Structure
@@ -68,9 +71,10 @@ Key dependencies include:
 - Automatic memory pruning based on token limits
 
 ### Web Search Integration
-- Real-time web search via DuckDuckGo
+- Real-time web search via DuckDuckGo (default) or Google/SerpAPI
 - Incorporates search results into AI responses
-- Configurable search depth
+- Configurable search depth and provider selection
+- Web content extraction and analysis via Firecrawl
 
 ### Chat Interface
 - Clean, responsive UI
