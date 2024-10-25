@@ -118,10 +118,11 @@ def get_search_tools():
         {
             "name": "firecrawl",
             "description": """Extract content from web pages using Firecrawl.
-            This tool can either fetch the entire page content or target specific information based on a prompt.
-            Use without a prompt parameter to get the full page content when you need comprehensive information.
-            Include a prompt parameter when you need to target specific information to answer a question.
-            The tool will return cleaned, readable text content from the webpage.""",
+            This tool converts web pages into clean, markdown-formatted text ideal for LLM processing.
+            Use without a prompt parameter to get the full page content as markdown.
+            Include a prompt parameter to extract specific information using LLM-powered extraction.
+            The tool handles dynamic content, JavaScript-rendered sites, and complex web pages automatically.
+            Returns cleaned, readable text content optimized for AI processing.""",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -267,13 +268,29 @@ def execute_serpapi_search(query: str, num_results: int) -> str:
 def execute_firecrawl(url: str, prompt: str = None) -> str:
     """Execute a Firecrawl web extraction"""
     try:
-        from firecrawl import Crawler
-        crawler = Crawler()
+        from firecrawl import FirecrawlApp
+        app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+        
+        params = {
+            'formats': ['markdown']
+        }
         
         if prompt:
-            return crawler.extract_with_prompt(url, prompt)
-        else:
-            return crawler.extract_content(url)
+            params['formats'].append('extract')
+            params['extract'] = {
+                'prompt': prompt
+            }
+            
+        result = app.scrape_url(url, params=params)
+        
+        # Return markdown content by default
+        content = result.get('markdown', '')
+        
+        # If extraction was requested, append it to the content
+        if prompt and 'extract' in result:
+            content += "\n\nExtracted Information:\n" + str(result['extract'])
+            
+        return content
     except Exception as e:
         st.error(f"Firecrawl error: {str(e)}")
         return "Unable to extract webpage content at this time."
