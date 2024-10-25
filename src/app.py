@@ -204,6 +204,9 @@ def get_assistant_response(
 
     # Construct system message with context
     system_message = """You are a helpful AI assistant with access to memory and web search capabilities.
+    When answering questions, you should actively use the web search results provided to you to give up-to-date and accurate information.
+    Always cite the sources from the web search results when you use them in your response.
+    If the web search results are relevant, incorporate that information into your response.
     Please provide informative responses while maintaining a natural conversational style."""
 
     if relevant_memories:
@@ -212,7 +215,7 @@ def get_assistant_response(
         )
 
     if web_search_results:
-        system_message += "\n\nRecent web search results:\n" + web_search_results
+        system_message += "\n\nRECENT WEB SEARCH RESULTS (Please use these to inform your response):\n" + web_search_results
 
     # Format messages for the API
     messages = []
@@ -231,7 +234,7 @@ def get_assistant_response(
             max_tokens=4000,
             system=system_message,  # System message passed separately
             messages=messages,
-            temperature=0.7,
+            temperature=0.5,  # Lower temperature for more focused responses
         )
 
         # Store important information in memory
