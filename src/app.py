@@ -460,6 +460,7 @@ class ToolUsageCounter:
         self.thought_count = 0
         self.search_count = 0
         self.visit_count = 0
+        self.memory_count = 0
 
     def count_tool(self, tool_name: str):
         if tool_name in ["search", "google_search"]:
@@ -467,6 +468,9 @@ class ToolUsageCounter:
         elif tool_name == "visit":
             self.visit_count += 1
         self.thought_count += 1
+
+    def set_memory_count(self, count: int):
+        self.memory_count = count
 
     def get_summary(self) -> str:
         parts = []
@@ -479,6 +483,10 @@ class ToolUsageCounter:
         if self.visit_count > 0:
             parts.append(
                 f"made {self.visit_count} visit{'' if self.visit_count == 1 else 's'}"
+            )
+        if self.memory_count > 0:
+            parts.append(
+                f"used {self.memory_count} relevant memor{'y' if self.memory_count == 1 else 'ies'}"
             )
 
         if not parts:
@@ -494,15 +502,10 @@ def get_assistant_response(
     progress_callback=None,
 ):
     """Get response from Claude API with memory and web search integration"""
-    # Get relevant memories
+    # Get relevant memories and count them
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
-
-    # Print relevant memories for debugging
-    # if relevant_memories:
-    #     st.write("Found relevant memories:")
-    #     st.write(relevant_memories)
-    # else:
-    #     st.write("No relevant memories found")
+    memory_count = len(relevant_memories.split("\n\n")) if relevant_memories else 0
+    tool_counter.set_memory_count(memory_count)
 
     # Construct system message with context and chain-of-thought prompting
     system_message = """You are a focused, factual researcher. You systematically investigate topics while keeping discussions within scope and relevant.
