@@ -134,48 +134,52 @@ def get_search_tools():
     ]
 
     # Add the selected search provider
-    if st.session_state.search_provider == "serpapi" and os.getenv("SERPAPI_KEY"):
-        tools.append({
-            "name": "google_search",
-            "description": "Search Google for current information.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "What to search for",
+    if st.session_state.search_provider == "serpapi":
+        tools.append(
+            {
+                "name": "google_search",
+                "description": "Search Google for current information.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to send to Google. Should be specific and focused on the information needed.",
+                        },
+                        "num_results": {
+                            "type": "integer",
+                            "description": "How many results (default 3)",
+                            "default": 3,
+                        },
                     },
-                    "num_results": {
-                        "type": "integer",
-                        "description": "How many results (default 3)",
-                        "default": 3,
-                    },
+                    "required": ["query"],
                 },
-                "required": ["query"],
-            },
-        })
+            }
+        )
     elif st.session_state.search_provider == "duckduckgo":
-        tools.append({
-            "name": "search",
-            "description": """Find information across the web. Returns titles, snippets and links. Use to research real-time and up-to-date information from anywhere on the internet.""",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to send to DuckDuckGo. Should be specific and focused on the information needed.",
+        tools.append(
+            {
+                "name": "search",
+                "description": """Find information across the web. Returns titles, snippets and links. Use to research real-time and up-to-date information from anywhere on the internet.""",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to send to DuckDuckGo. Should be specific and focused on the information needed.",
+                        },
+                        "num_results": {
+                            "type": "integer",
+                            "description": "Number of search results to return (default 3, max 10)",
+                            "default": 3,
+                            "minimum": 1,
+                            "maximum": 10,
+                        },
                     },
-                    "num_results": {
-                        "type": "integer",
-                        "description": "Number of search results to return (default 3, max 10)",
-                        "default": 3,
-                        "minimum": 1,
-                        "maximum": 10,
-                    },
+                    "required": ["query"],
                 },
-                "required": ["query"],
-            },
-        })
+            }
+        )
 
     return tools
 
