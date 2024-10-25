@@ -130,8 +130,32 @@ def get_search_tools():
                 },
                 "required": ["url"],
             },
-        },
-        {
+        }
+    ]
+
+    # Add the selected search provider
+    if st.session_state.search_provider == "serpapi" and os.getenv("SERPAPI_KEY"):
+        tools.append({
+            "name": "google_search",
+            "description": "Search Google for current information.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "What to search for",
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "How many results (default 3)",
+                        "default": 3,
+                    },
+                },
+                "required": ["query"],
+            },
+        })
+    elif st.session_state.search_provider == "duckduckgo":
+        tools.append({
             "name": "search",
             "description": """Find information across the web. Returns titles, snippets and links. Use to research real-time and up-to-date information from anywhere on the internet.""",
             "input_schema": {
@@ -151,31 +175,7 @@ def get_search_tools():
                 },
                 "required": ["query"],
             },
-        },
-    ]
-
-    if os.getenv("SERPAPI_KEY"):
-        tools.append(
-            {
-                "name": "google_search",
-                "description": "Search Google for current information.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "What to search for",
-                        },
-                        "num_results": {
-                            "type": "integer",
-                            "description": "How many results (default 3)",
-                            "default": 3,
-                        },
-                    },
-                    "required": ["query"],
-                },
-            }
-        )
+        })
 
     return tools
 
