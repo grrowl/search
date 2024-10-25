@@ -211,7 +211,7 @@ def execute_duckduckgo_search(query: str, num_results: int) -> str:
             formatted_results.append(
                 f"[Result {i}]\n"
                 f"Title: {result.get('title', 'No title')}\n"
-                f"URL: {result.get('link', 'No URL')}\n"
+                f"URL: {result.get('link') or result.get('url', 'No URL')}\n"
                 f"Description: {result.get('body', 'No description')}\n"
                 f"Published: {result.get('published', 'Date unknown')}\n"
             )
