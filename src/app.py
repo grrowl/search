@@ -227,7 +227,7 @@ def get_assistant_response(
 
     try:
         response = anthropic.messages.create(
-            model="claude-3-opus-20240229",
+            model="claude-3-5-sonnet-latest",
             max_tokens=4000,
             messages=messages,
             temperature=0.7,
@@ -235,25 +235,37 @@ def get_assistant_response(
 
         # Store important information in memory
         st.session_state.memory_manager.add_memory(
-            f"User asked: {prompt}\nAssistant responded: {response.content[0].text}",
+            f"User asked: {prompt}\nAssistant responded: {response.content[0].value}",
             importance=1.0,
         )
 
-        return response.content[0].text
+        return response.content[0].value
     except Exception as e:
         return f"Error: {str(e)}"
 
 
+# [Previous imports and class definitions remain the same until the Page config section]
+
 # Page config
 st.set_page_config(page_title="Claude Chat", page_icon="🤖", layout="wide")
 
-# Create two columns for main chat and memory display
+# Initialize session state variables
+if "include_web_search" not in st.session_state:
+    st.session_state.include_web_search = True
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Main chat interface - Title at the top
+st.title("Claude Chat Assistant")
+
+# Chat input must be at root level
+prompt = st.chat_input("What would you like to know?")
+
+# Create two columns for chat history and memory display
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    # Main chat interface
-    st.title("Claude Chat Assistant")
-
     # Load existing chat history
     if not st.session_state.messages:
         st.session_state.messages = load_chat_history()
@@ -263,8 +275,8 @@ with col1:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Chat input
-    if prompt := st.chat_input("What would you like to know?"):
+    # Process the prompt if it exists
+    if prompt:
         # Display user message
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -276,7 +288,9 @@ with col1:
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response = get_assistant_response(
-                    prompt, st.session_state.messages[:-1], include_web_search
+                    prompt,
+                    st.session_state.messages[:-1],
+                    st.session_state.include_web_search,
                 )
                 st.markdown(response)
 
@@ -287,10 +301,13 @@ with col1:
         save_chat_history(st.session_state.messages)
 
 with col2:
-    # Sidebar controls
+    # Settings and controls
     st.title("Settings")
 
-    include_web_search = st.checkbox("Enable Web Search", value=True)
+    # Update web search setting in session state
+    st.session_state.include_web_search = st.checkbox(
+        "Enable Web Search", value=st.session_state.include_web_search
+    )
 
     st.subheader("Memory Management")
     if st.button("Clear All Memories"):
@@ -301,7 +318,7 @@ with col2:
         st.session_state.messages = []
         if os.path.exists("chat_history.json"):
             os.remove("chat_history.json")
-        st.rerun()  # Updated from experimental_rerun()
+        st.rerun()
 
     # Display memories with voting
     display_memories()
