@@ -508,11 +508,11 @@ Take multiple turns with tools to:
         # Get available search tools
         tools = get_search_tools() if include_web_search else []
 
-        # Make initial request to Claude
+        # Make request to Claude with tool calling enabled
         if progress_callback:
-            progress_callback("Making initial request to Claude")
+            progress_callback("Making request to Claude")
 
-        message = anthropic.messages.create(
+        response = anthropic.messages.create(
             model="claude-3-sonnet-20240229",
             max_tokens=4000,
             system=system_message,
@@ -521,11 +521,10 @@ Take multiple turns with tools to:
             temperature=0.5,
         )
 
-        if message.stop_reason == "tool_use":
+        # Process any tool calls recursively
+        while response.stop_reason == "tool_use":
             # Get the tool use block
-            tool_use = next(
-                block for block in message.content if block.type == "tool_use"
-            )
+            tool_use = next(block for block in response.content if block.type == "tool_use")
             tool_name = tool_use.name
             tool_args = tool_use.input
 
@@ -534,7 +533,6 @@ Take multiple turns with tools to:
                 progress_callback(f"Executing tool: {tool_name}", tool_args)
 
             tool_result = execute_tool(tool_name, tool_args)
-
             if progress_callback:
                 progress_callback("Tool execution complete", tool_result)
 
@@ -542,38 +540,29 @@ Take multiple turns with tools to:
             if isinstance(tool_result, dict):
                 tool_result = json.dumps(tool_result)
 
-            # Make follow-up request with tool result
+            # Add tool result to messages and continue conversation
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({
+                "role": "user", 
+                "content": [{
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": tool_result
+                }]
+            })
+
+            # Make another request with the tool result
             if progress_callback:
-                progress_callback(
-                    "Making follow-up request to Claude with tool results"
-                )
+                progress_callback("Continuing conversation with tool results")
 
             response = anthropic.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=4000,
-                messages=[
-                    *messages,  # Original messages
-                    {
-                        "role": "assistant",
-                        "content": message.content,
-                    },  # Claude's first response
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": tool_use.id,
-                                "content": tool_result,
-                            }
-                        ],
-                    },
-                ],
                 system=system_message,
+                messages=messages,
                 tools=tools,
                 temperature=0.5,
             )
-        else:
-            response = message
 
         # Get the final text response
         final_response = next(
