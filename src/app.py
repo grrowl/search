@@ -618,8 +618,12 @@ You MUST include markdown footnote citations for all factual claims. If sources 
         # Get the final text response
         final_response = next(
             (block.text for block in response.content if hasattr(block, "text")),
-            None,
+            "I apologize, but I was unable to generate a response. Please try again."
         )
+        
+        # Log if no text block was found
+        if not any(hasattr(block, "text") for block in response.content):
+            print(f"Response did not include text and had stop_reason of {response.stop_reason}")
 
         # Store recent questions information in memory
         # st.session_state.memory_manager.add_memory(
