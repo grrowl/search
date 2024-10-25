@@ -116,16 +116,27 @@ def get_search_tools():
     """Get the available search tools based on configuration"""
     tools = [
         {
-            "name": "duckduckgo_search",
-            "description": "Search the web using DuckDuckGo. Use this to find current information about topics.",
+            "name": "duckduckgo_search", 
+            "description": """Search the web using DuckDuckGo to find current information about topics.
+            This tool performs a text search and returns multiple results from across the web.
+            Each result includes a title, URL, description snippet, and publication date if available.
+            Use this tool when you need to find factual information, news, or general web content.
+            The results are from public web pages indexed by DuckDuckGo.
+            Results are sorted by relevance but may not be completely up to date.
+            Do not use this tool for queries requiring real-time data like current weather or stock prices.""",
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "The search query"},
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to send to DuckDuckGo. Should be specific and focused on the information needed."
+                    },
                     "num_results": {
                         "type": "integer",
-                        "description": "Number of results to return (default 3)",
+                        "description": "Number of search results to return (default 3, max 10)",
                         "default": 3,
+                        "minimum": 1,
+                        "maximum": 10
                     },
                 },
                 "required": ["query"],
@@ -234,22 +245,46 @@ def execute_serpapi_search(query: str, num_results: int) -> str:
 def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute the requested tool with the given input"""
     try:
-        if "query" not in tool_args:
-            return "Error: Search query is required"
+        # Validate required parameters
+        if tool_name in ["duckduckgo_search", "serpapi_search"]:
+            if "query" not in tool_args:
+                return {
+                    "error": "Missing required 'query' parameter",
+                    "is_error": True
+                }
+            
+            # Validate and constrain num_results
+            num_results = min(max(tool_args.get("num_results", 3), 1), 10)
+            query = tool_args["query"]
 
-        num_results = tool_args.get("num_results", 9)
-        query = tool_args["query"]
-
-        if tool_name == "duckduckgo_search":
-            return execute_duckduckgo_search(query, num_results)
-        elif tool_name == "serpapi_search":
-            return execute_serpapi_search(query, num_results)
+            if tool_name == "duckduckgo_search":
+                try:
+                    return execute_duckduckgo_search(query, num_results)
+                except Exception as e:
+                    return {
+                        "error": f"DuckDuckGo search failed: {str(e)}",
+                        "is_error": True
+                    }
+            elif tool_name == "serpapi_search":
+                try:
+                    return execute_serpapi_search(query, num_results)
+                except Exception as e:
+                    return {
+                        "error": f"SerpAPI search failed: {str(e)}",
+                        "is_error": True
+                    }
         else:
-            return f"Error: Unknown tool '{tool_name}'"
+            return {
+                "error": f"Unknown tool '{tool_name}'",
+                "is_error": True
+            }
 
     except Exception as e:
         st.error(f"Tool execution error: {str(e)}")
-        return f"Error executing {tool_name}: {str(e)}"
+        return {
+            "error": f"Error executing {tool_name}: {str(e)}",
+            "is_error": True
+        }
 
 
 # Initialize memory manager
@@ -318,11 +353,19 @@ def get_assistant_response(
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
 
-    # Construct system message with context
+    # Construct system message with context and chain-of-thought prompting
     system_message = """You are a helpful AI assistant with access to memory and web search capabilities.
     When answering questions that require current information, use the search tools available to you.
     Always cite the sources from search results when you use them in your response.
-    Please provide informative responses while maintaining a natural conversational style."""
+    Please provide informative responses while maintaining a natural conversational style.
+    
+    Before using any tool, explain your reasoning within <thinking></thinking> tags:
+    1. Analyze which tool would be most appropriate for the query
+    2. Check if you have all required parameters or can reasonably infer them
+    3. If any required parameters are missing, ask the user instead of guessing
+    4. Only proceed with the tool call if you have all needed information
+    
+    Do not reflect on search result quality using <search_quality_reflection> tags."""
 
     if relevant_memories:
         system_message += (
