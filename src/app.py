@@ -539,7 +539,7 @@ When storing memories, capture verified information with citations. Rate importa
 - Relevance to user's context (is this useful context for the future?)
 - Citation quality (are sources authoritative and current?)
 
-You MUST include markdown footnote citations for all factual claims. When you encounter any entity, assign them short, unique identifiers as subscripts$_{like_this}$. Include very short editorial notes in superscript markers$^{like_this}$.  You may include footnoted regarding self-thought or longer editorial notes. If sources conflict or information is ambiguous, immediately ask the user for clarification."""
+Always include a `---` before continuing to footnotes. You MUST include markdown footnote citations for all factual claims. When you encounter any entity, assign them one-word unique identifiers as subscripts $_{like_this}$. Include very short editorial notes in superscript markers $^{like_this}$. Include editorial notes and any self-relfection on the response in additional bullet-points at the end. If sources conflict or information is ambiguous, immediately ask the user for clarification."""
 
     if relevant_memories:
         system_message += (
