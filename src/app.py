@@ -52,8 +52,8 @@ class MemoryManager:
         for memory in self.memories:
             if memory["id"] == memory_id:
                 memory["votes"] += vote
-                # Adjust importance based on votes (normalized between 0.5 and 2.0)
-                memory["importance"] = max(0.5, min(2.0, 1.0 + (memory["votes"] * 0.1)))
+                # Adjust importance relative to current value (bounded between 0.5 and 2.0)
+                memory["importance"] = max(0.5, min(2.0, memory["importance"] + (vote * 0.1)))
                 break
         self.save_memories()
 
@@ -504,7 +504,8 @@ def get_assistant_response(
     """Get response from Claude API with memory and web search integration"""
     # Get relevant memories and count them
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
-    memory_count = len(relevant_memories.split("\n\n")) if relevant_memories else 0
+    # Only count non-empty memory entries
+    memory_count = len([m for m in relevant_memories.split("\n\n") if m.strip()]) if relevant_memories else 0
     tool_counter.set_memory_count(memory_count)
 
     # Construct system message with context and chain-of-thought prompting
