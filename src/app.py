@@ -53,7 +53,9 @@ class MemoryManager:
             if memory["id"] == memory_id:
                 memory["votes"] += vote
                 # Adjust importance relative to current value (bounded between 0.5 and 2.0)
-                memory["importance"] = max(0.5, min(2.0, memory["importance"] + (vote * 0.1)))
+                memory["importance"] = max(
+                    0.5, min(2.0, memory["importance"] + (vote * 0.1))
+                )
                 break
         self.save_memories()
 
@@ -159,7 +161,7 @@ def get_search_tools():
                     "url": {"type": "string", "description": "Webpage URL to read"},
                     "extract": {
                         "type": "string",
-                        "description": "Optional: describe the specific information to extract from the webpage",
+                        "description": "Describe the specific information to extract from the webpage",
                     },
                 },
                 "required": ["url"],
@@ -505,7 +507,11 @@ def get_assistant_response(
     # Get relevant memories and count them
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
     # Only count non-empty memory entries
-    memory_count = len([m for m in relevant_memories.split("\n\n") if m.strip()]) if relevant_memories else 0
+    memory_count = (
+        len([m for m in relevant_memories.split("\n\n") if m.strip()])
+        if relevant_memories
+        else 0
+    )
     tool_counter.set_memory_count(memory_count)
 
     # Construct system message with context and chain-of-thought prompting
@@ -618,12 +624,14 @@ You MUST include markdown footnote citations for all factual claims. If sources 
         # Get the final text response
         final_response = next(
             (block.text for block in response.content if hasattr(block, "text")),
-            "I apologize, but I was unable to generate a response. Please try again."
+            "I apologize, but I was unable to generate a response. Please try again.",
         )
-        
+
         # Log if no text block was found
         if not any(hasattr(block, "text") for block in response.content):
-            print(f"Response did not include text and had stop_reason of {response.stop_reason}")
+            print(
+                f"Response did not include text and had stop_reason of {response.stop_reason}"
+            )
 
         # Store recent questions information in memory
         # st.session_state.memory_manager.add_memory(
@@ -689,15 +697,18 @@ with col1:
             response_placeholder = st.empty()
             with st.spinner("Thinking..."):
                 # Add custom CSS for the scrollable container
-                st.markdown("""
+                st.markdown(
+                    """
                     <style>
                     .stExpander div[data-testid="stExpander"] {
                         max-height: 80dvh;
                         overflow-y: auto;
                     }
                     </style>
-                """, unsafe_allow_html=True)
-                
+                """,
+                    unsafe_allow_html=True,
+                )
+
                 progress_expander = st.expander("View Progress", expanded=False)
                 with progress_expander:
                     summary_placeholder = st.empty()
