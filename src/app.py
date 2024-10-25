@@ -601,6 +601,8 @@ def get_assistant_response(
 st.set_page_config(page_title="Claude Chat", page_icon="🤖", layout="wide")
 
 # Initialize session state variables
+if "progress_updates" not in st.session_state:
+    st.session_state.progress_updates = []
 if "include_web_search" not in st.session_state:
     st.session_state.include_web_search = True
 if "search_provider" not in st.session_state:
@@ -647,11 +649,21 @@ with col1:
                 with progress_expander:
                     progress_placeholder = st.empty()
 
+                # Clear previous progress updates
+                st.session_state.progress_updates = []
+                
                 def progress_callback(action, details=None):
+                    update = {"action": f"🔄 {action}", "timestamp": datetime.now().isoformat()}
+                    if details:
+                        update["details"] = details
+                    st.session_state.progress_updates.append(update)
+                    
+                    # Display all updates in chronological order
                     with progress_placeholder.container():
-                        st.write(f"🔄 {action}")
-                        if details:
-                            st.code(details, language="json")
+                        for update in st.session_state.progress_updates:
+                            st.write(update["action"])
+                            if "details" in update:
+                                st.code(update["details"], language="json")
 
                 response = get_assistant_response(
                     prompt,
