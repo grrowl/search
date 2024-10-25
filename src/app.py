@@ -248,7 +248,7 @@ def execute_serpapi_search(query: str, num_results: int) -> str:
             formatted_results.append(
                 f"[Result {i}]\n"
                 f"Title: {result.get('title', 'No title')}\n"
-                f"URL: {result.get('link', 'No URL')}\n"
+                f"URL: {result['link']}\n"
                 f"Description: {result.get('snippet', 'No description')}\n"
                 f"Position: {result.get('position', 'Unknown')}\n"
                 f"Displayed URL: {result.get('displayed_link', 'No URL')}\n"
