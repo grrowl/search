@@ -688,6 +688,16 @@ with col1:
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
             with st.spinner("Thinking..."):
+                # Add custom CSS for the scrollable container
+                st.markdown("""
+                    <style>
+                    .stExpander div[data-testid="stExpander"] {
+                        max-height: 80dvh;
+                        overflow-y: auto;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+                
                 progress_expander = st.expander("View Progress", expanded=False)
                 with progress_expander:
                     summary_placeholder = st.empty()
