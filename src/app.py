@@ -114,59 +114,60 @@ class MemoryManager:
 
 def get_search_tools():
     """Get the available search tools based on configuration"""
-    tools = [{
-        "name": "duckduckgo_search",
-        "description": "Search the web using DuckDuckGo. Use this to find current information about topics.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The search query"
-                },
-                "num_results": {
-                    "type": "integer",
-                    "description": "Number of results to return (default 3)",
-                    "default": 3
-                }
-            },
-            "required": ["query"]
-        }
-    }]
-    
-    if os.getenv("SERPAPI_KEY"):
-        tools.append({
-            "name": "serpapi_search",
-            "description": "Search the web using Google (via SerpAPI). Use this to find current information about topics.",
+    tools = [
+        {
+            "name": "duckduckgo_search",
+            "description": "Search the web using DuckDuckGo. Use this to find current information about topics.",
             "input_schema": {
-                "type": "object", 
+                "type": "object",
                 "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query"
-                    },
+                    "query": {"type": "string", "description": "The search query"},
                     "num_results": {
                         "type": "integer",
                         "description": "Number of results to return (default 3)",
-                        "default": 3
-                    }
+                        "default": 3,
+                    },
                 },
-                "required": ["query"]
+                "required": ["query"],
+            },
+        }
+    ]
+
+    if os.getenv("SERPAPI_KEY"):
+        tools.append(
+            {
+                "name": "serpapi_search",
+                "description": "Search the web using Google (via SerpAPI). Use this to find current information about topics.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "The search query"},
+                        "num_results": {
+                            "type": "integer",
+                            "description": "Number of results to return (default 3)",
+                            "default": 3,
+                        },
+                    },
+                    "required": ["query"],
+                },
             }
-        })
-    
+        )
+
     return tools
+
 
 def execute_duckduckgo_search(query: str, num_results: int) -> str:
     """Execute a DuckDuckGo search"""
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(
-                query,
-                max_results=num_results,
-                region='wt-wt',
-                safesearch='moderate'
-            ))
+            results = list(
+                ddgs.text(
+                    query,
+                    max_results=num_results,
+                    region="wt-wt",
+                    safesearch="moderate",
+                )
+            )
 
         if not results:
             return "No search results found."
@@ -186,6 +187,7 @@ def execute_duckduckgo_search(query: str, num_results: int) -> str:
         st.error(f"DuckDuckGo search error: {str(e)}")
         return "Unable to perform DuckDuckGo search at this time."
 
+
 def execute_serpapi_search(query: str, num_results: int) -> str:
     """Execute a Google search via SerpAPI"""
     try:
@@ -195,7 +197,7 @@ def execute_serpapi_search(query: str, num_results: int) -> str:
             "api_key": os.getenv("SERPAPI_KEY"),
             "hl": "en",
             "gl": "us",
-            "safe": "active"
+            "safe": "active",
         }
         search = GoogleSearch(params)
         results = search.get_dict()
@@ -217,7 +219,7 @@ def execute_serpapi_search(query: str, num_results: int) -> str:
                 f"Position: {result.get('position', 'Unknown')}\n"
                 f"Displayed URL: {result.get('displayed_link', 'No URL')}\n"
             )
-            
+
             if "rich_snippet" in result:
                 rich = result["rich_snippet"]
                 if "top" in rich:
@@ -227,6 +229,7 @@ def execute_serpapi_search(query: str, num_results: int) -> str:
     except Exception as e:
         st.error(f"SerpAPI search error: {str(e)}")
         return "Unable to perform Google search at this time."
+
 
 def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute the requested tool with the given input"""
@@ -243,7 +246,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
             return execute_serpapi_search(query, num_results)
         else:
             return f"Error: Unknown tool '{tool_name}'"
-            
+
     except Exception as e:
         st.error(f"Tool execution error: {str(e)}")
         return f"Error executing {tool_name}: {str(e)}"
@@ -308,7 +311,9 @@ def save_chat_history(messages):
         json.dump(messages, f)
 
 
-def get_assistant_response(prompt: str, history: List[Dict], include_web_search: bool = True):
+def get_assistant_response(
+    prompt: str, history: List[Dict], include_web_search: bool = True
+):
     """Get response from Claude API with memory and web search integration"""
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
@@ -338,7 +343,7 @@ def get_assistant_response(prompt: str, history: List[Dict], include_web_search:
     try:
         # Get available search tools
         tools = get_search_tools() if include_web_search else []
-        
+
         # Make initial request to Claude
         response = anthropic.messages.create(
             model="claude-3-5-sonnet-latest",
@@ -353,40 +358,44 @@ def get_assistant_response(prompt: str, history: List[Dict], include_web_search:
         while True:
             # Check if the last message contains a tool call
             last_message = response.content[-1]
-            
+
             if last_message.type == "text":
                 # No tool calls, return the final text response
                 final_response = last_message.text
                 break
             elif last_message.type == "tool_use":
                 # Process tool use request
-                tool_name = last_message.tool_use.tool_name
-                tool_args = last_message.tool_use.parameters
-                
+                tool_name = last_message.name
+                tool_args = last_message.input
+
                 # Execute the tool
                 tool_result = execute_tool(tool_name, tool_args)
-                
+
                 # Add the tool result to messages
-                messages.append({
-                    "role": "tool",
-                    "content": tool_result,
-                    "tool_call_id": last_message.tool_use.id
-                })
-                
+                messages.append(
+                    {
+                        "role": "tool",
+                        "content": tool_result,
+                        "tool_call_id": last_message.id,
+                    }
+                )
+
                 # Execute the tool
                 tool_result = execute_tool(tool_name, json.loads(tool_args))
-                
+
                 # Add the tool result to messages
                 # Execute the tool and continue the conversation
                 tool_result = execute_tool(tool_name, tool_args)
-                
+
                 # Add the tool result to messages
-                messages.append({
-                    "role": "tool",
-                    "content": tool_result,
-                    "tool_call_id": last_message.tool_use.id
-                })
-            
+                messages.append(
+                    {
+                        "role": "tool",
+                        "content": tool_result,
+                        "tool_call_id": last_message.id,
+                    }
+                )
+
             # Get next response from Claude with tool results
             response = anthropic.messages.create(
                 model="claude-3-5-sonnet-latest",
@@ -419,7 +428,9 @@ st.set_page_config(page_title="Claude Chat", page_icon="🤖", layout="wide")
 if "include_web_search" not in st.session_state:
     st.session_state.include_web_search = True
 if "search_provider" not in st.session_state:
-    st.session_state.search_provider = "serpapi" if os.getenv("SERPAPI_KEY") else "duckduckgo"
+    st.session_state.search_provider = (
+        "serpapi" if os.getenv("SERPAPI_KEY") else "duckduckgo"
+    )
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -476,15 +487,15 @@ with col2:
     st.session_state.include_web_search = st.checkbox(
         "Enable Web Search", value=st.session_state.include_web_search
     )
-    
+
     search_options = ["duckduckgo"]
     if os.getenv("SERPAPI_KEY"):
         search_options.insert(0, "serpapi")
-    
+
     st.session_state.search_provider = st.selectbox(
         "Search Provider",
         options=search_options,
-        index=search_options.index(st.session_state.search_provider)
+        index=search_options.index(st.session_state.search_provider),
     )
 
     st.subheader("Memory Management")
