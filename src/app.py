@@ -112,69 +112,109 @@ class MemoryManager:
             os.remove("memories.json")
 
 
-def perform_serpapi_search(query: str, num_results: int = 3) -> str:
-    """Perform web search using SerpAPI"""
-    try:
-        params = {
-            "q": query,
-            "num": num_results,
-            "api_key": os.getenv("SERPAPI_KEY")
+def get_search_tools():
+    """Get the available search tools based on configuration"""
+    tools = [{
+        "name": "duckduckgo_search",
+        "description": "Search the web using DuckDuckGo. Use this to find current information about topics.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query"
+                },
+                "num_results": {
+                    "type": "integer",
+                    "description": "Number of results to return (default 3)",
+                    "default": 3
+                }
+            },
+            "required": ["query"]
         }
-        search = GoogleSearch(params)
-        results = search.get_dict().get("organic_results", [])
+    }]
+    
+    if os.getenv("SERPAPI_KEY"):
+        tools.append({
+            "name": "serpapi_search",
+            "description": "Search the web using Google (via SerpAPI). Use this to find current information about topics.",
+            "input_schema": {
+                "type": "object", 
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query"
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "Number of results to return (default 3)",
+                        "default": 3
+                    }
+                },
+                "required": ["query"]
+            }
+        })
+    
+    return tools
 
-        if not results:
-            return "No search results found."
+def execute_tool(tool_name: str, tool_input: dict) -> str:
+    """Execute the requested tool with the given input"""
+    if tool_name == "duckduckgo_search":
+        try:
+            num_results = tool_input.get("num_results", 3)
+            with DDGS() as ddgs:
+                results = list(ddgs.text(tool_input["query"], max_results=num_results))
 
-        formatted_results = []
-        for result in results[:num_results]:
-            title = result.get("title", "No title available")
-            link = result.get("link", "No link available")
-            snippet = result.get("snippet", "No snippet available")
+            if not results:
+                return "No search results found."
 
-            formatted_results.append(
-                f"Title: {title}\n"
-                f"Link: {link}\n"
-                f"Snippet: {snippet}\n"
-            )
+            formatted_results = []
+            for result in results:
+                title = result.get("title", "No title available")
+                link = result.get("link", "No link available") 
+                snippet = result.get("body", "No snippet available")
 
-        return "\n\n".join(formatted_results)
-    except Exception as e:
-        st.error(f"SerpAPI search error: {str(e)}")
-        return "Unable to perform web search at this time."
+                formatted_results.append(
+                    f"Title: {title}\n"
+                    f"Link: {link}\n"
+                    f"Snippet: {snippet}\n"
+                )
 
-def perform_duckduckgo_search(query: str, num_results: int = 3) -> str:
-    """Perform web search using DuckDuckGo"""
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=num_results))
+            return "\n\n".join(formatted_results)
+        except Exception as e:
+            st.error(f"DuckDuckGo search error: {str(e)}")
+            return "Unable to perform web search at this time."
 
-        if not results:
-            return "No search results found."
+    elif tool_name == "serpapi_search":
+        try:
+            num_results = tool_input.get("num_results", 3)
+            params = {
+                "q": tool_input["query"],
+                "num": num_results,
+                "api_key": os.getenv("SERPAPI_KEY")
+            }
+            search = GoogleSearch(params)
+            results = search.get_dict().get("organic_results", [])
 
-        formatted_results = []
-        for result in results:
-            title = result.get("title", "No title available")
-            link = result.get("link", "No link available")
-            snippet = result.get("body", "No snippet available")
+            if not results:
+                return "No search results found."
 
-            formatted_results.append(
-                f"Title: {title}\n"
-                f"Link: {link}\n"
-                f"Snippet: {snippet}\n"
-            )
+            formatted_results = []
+            for result in results[:num_results]:
+                title = result.get("title", "No title available")
+                link = result.get("link", "No link available")
+                snippet = result.get("snippet", "No snippet available")
 
-        return "\n\n".join(formatted_results)
-    except Exception as e:
-        st.error(f"DuckDuckGo search error: {str(e)}")
-        return "Unable to perform web search at this time."
+                formatted_results.append(
+                    f"Title: {title}\n"
+                    f"Link: {link}\n"
+                    f"Snippet: {snippet}\n"
+                )
 
-def perform_web_search(query: str, num_results: int = 3) -> str:
-    """Perform web search using selected provider"""
-    if st.session_state.search_provider == "serpapi" and os.getenv("SERPAPI_KEY"):
-        return perform_serpapi_search(query, num_results)
-    else:
-        return perform_duckduckgo_search(query, num_results)
+            return "\n\n".join(formatted_results)
+        except Exception as e:
+            st.error(f"SerpAPI search error: {str(e)}")
+            return "Unable to perform web search at this time."
 
 
 # Initialize memory manager
@@ -244,27 +284,15 @@ def get_assistant_response(
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
 
-    # Perform web search if enabled
-    web_search_results = ""
-    if include_web_search:
-        web_search_results = perform_web_search(prompt)
-
     # Construct system message with context
     system_message = """You are a helpful AI assistant with access to memory and web search capabilities.
-    When answering questions, you should actively use the web search results provided to you to give up-to-date and accurate information.
-    Always cite the sources from the web search results when you use them in your response.
-    If the web search results are relevant, incorporate that information into your response.
+    When answering questions that require current information, use the search tools available to you.
+    Always cite the sources from search results when you use them in your response.
     Please provide informative responses while maintaining a natural conversational style."""
 
     if relevant_memories:
         system_message += (
             "\n\nRelevant memories from previous conversations:\n" + relevant_memories
-        )
-
-    if web_search_results:
-        system_message += (
-            "\n\nRECENT WEB SEARCH RESULTS (Please use these to inform your response):\n"
-            + web_search_results
         )
 
     # Format messages for the API
@@ -279,21 +307,56 @@ def get_assistant_response(
     messages.append({"role": "user", "content": prompt})
 
     try:
+        # Get available search tools
+        tools = get_search_tools() if include_web_search else []
+        
+        # Make initial request to Claude
         response = anthropic.messages.create(
             model="claude-3-5-sonnet-latest",
             max_tokens=4000,
-            system=system_message,  # System message passed separately
+            system=system_message,
             messages=messages,
-            temperature=0.5,  # Lower temperature for more focused responses
+            tools=tools,
+            temperature=0.5,
         )
+
+        # Handle tool use if needed
+        while response.stop_reason == "tool_use":
+            tool_use = response.content[0].text if isinstance(response.content[0].text, str) else response.content[-1]
+            if not isinstance(tool_use, dict) or "tool_use" not in tool_use:
+                break
+                
+            tool_result = execute_tool(tool_use["tool_use"]["name"], tool_use["tool_use"]["input"])
+            
+            # Add tool result to messages
+            messages.append({
+                "role": "user",
+                "content": [{
+                    "type": "tool_result",
+                    "tool_use_id": tool_use["tool_use"]["id"],
+                    "content": tool_result
+                }]
+            })
+            
+            # Get next response from Claude
+            response = anthropic.messages.create(
+                model="claude-3-5-sonnet-latest",
+                max_tokens=4000,
+                system=system_message,
+                messages=messages,
+                tools=tools,
+                temperature=0.5,
+            )
+
+        final_response = response.content[0].text
 
         # Store important information in memory
         st.session_state.memory_manager.add_memory(
-            f"User asked: {prompt}\nAssistant responded: {response.content[0].text}",
+            f"User asked: {prompt}\nAssistant responded: {final_response}",
             importance=1.0,
         )
 
-        return response.content[0].text
+        return final_response
     except Exception as e:
         return f"Error: {str(e)}"
 
