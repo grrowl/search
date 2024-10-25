@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 import os
 from duckduckgo_search import DDGS
+from serpapi import GoogleSearch
 import tiktoken
 from typing import List, Dict
 import pandas as pd
@@ -111,7 +112,38 @@ class MemoryManager:
             os.remove("memories.json")
 
 
-def perform_web_search(query: str, num_results: int = 3) -> str:
+def perform_serpapi_search(query: str, num_results: int = 3) -> str:
+    """Perform web search using SerpAPI"""
+    try:
+        params = {
+            "q": query,
+            "num": num_results,
+            "api_key": os.getenv("SERPAPI_KEY")
+        }
+        search = GoogleSearch(params)
+        results = search.get_dict().get("organic_results", [])
+
+        if not results:
+            return "No search results found."
+
+        formatted_results = []
+        for result in results[:num_results]:
+            title = result.get("title", "No title available")
+            link = result.get("link", "No link available")
+            snippet = result.get("snippet", "No snippet available")
+
+            formatted_results.append(
+                f"Title: {title}\n"
+                f"Link: {link}\n"
+                f"Snippet: {snippet}\n"
+            )
+
+        return "\n\n".join(formatted_results)
+    except Exception as e:
+        st.error(f"SerpAPI search error: {str(e)}")
+        return "Unable to perform web search at this time."
+
+def perform_duckduckgo_search(query: str, num_results: int = 3) -> str:
     """Perform web search using DuckDuckGo"""
     try:
         with DDGS() as ddgs:
@@ -122,21 +154,27 @@ def perform_web_search(query: str, num_results: int = 3) -> str:
 
         formatted_results = []
         for result in results:
-            # Safely get dictionary values with fallbacks
             title = result.get("title", "No title available")
             link = result.get("link", "No link available")
             snippet = result.get("body", "No snippet available")
 
-            print(f"Title: {title}\nLink: {link}\nSnippet: {snippet}\n")
-
             formatted_results.append(
-                f"Title: {title}\n" f"Link: {link}\n" f"Snippet: {snippet}\n"
+                f"Title: {title}\n"
+                f"Link: {link}\n"
+                f"Snippet: {snippet}\n"
             )
 
         return "\n\n".join(formatted_results)
     except Exception as e:
-        st.error(f"Search error: {str(e)}")
+        st.error(f"DuckDuckGo search error: {str(e)}")
         return "Unable to perform web search at this time."
+
+def perform_web_search(query: str, num_results: int = 3) -> str:
+    """Perform web search using selected provider"""
+    if st.session_state.search_provider == "serpapi" and os.getenv("SERPAPI_KEY"):
+        return perform_serpapi_search(query, num_results)
+    else:
+        return perform_duckduckgo_search(query, num_results)
 
 
 # Initialize memory manager
@@ -268,6 +306,8 @@ st.set_page_config(page_title="Claude Chat", page_icon="🤖", layout="wide")
 # Initialize session state variables
 if "include_web_search" not in st.session_state:
     st.session_state.include_web_search = True
+if "search_provider" not in st.session_state:
+    st.session_state.search_provider = "serpapi" if os.getenv("SERPAPI_KEY") else "duckduckgo"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -320,9 +360,19 @@ with col2:
     # Settings and controls
     st.title("Settings")
 
-    # Update web search setting in session state
+    # Search settings
     st.session_state.include_web_search = st.checkbox(
         "Enable Web Search", value=st.session_state.include_web_search
+    )
+    
+    search_options = ["duckduckgo"]
+    if os.getenv("SERPAPI_KEY"):
+        search_options.insert(0, "serpapi")
+    
+    st.session_state.search_provider = st.selectbox(
+        "Search Provider",
+        options=search_options,
+        index=search_options.index(st.session_state.search_provider)
     )
 
     st.subheader("Memory Management")
