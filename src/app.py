@@ -116,7 +116,29 @@ def get_search_tools():
     """Get the available search tools based on configuration"""
     tools = [
         {
-            "name": "duckduckgo_search", 
+            "name": "firecrawl",
+            "description": """Extract content from web pages using Firecrawl.
+            This tool can either fetch the entire page content or target specific information based on a prompt.
+            Use without a prompt parameter to get the full page content when you need comprehensive information.
+            Include a prompt parameter when you need to target specific information to answer a question.
+            The tool will return cleaned, readable text content from the webpage.""",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL of the webpage to crawl"
+                    },
+                    "prompt": {
+                        "type": "string",
+                        "description": "Optional prompt to target specific information from the page",
+                    }
+                },
+                "required": ["url"]
+            }
+        },
+        {
+            "name": "duckduckgo_search",
             "description": """Search the web using DuckDuckGo to find current information about topics.
             This tool performs a text search and returns multiple results from across the web.
             Each result includes a title, URL, description snippet, and publication date if available.
@@ -242,11 +264,33 @@ def execute_serpapi_search(query: str, num_results: int) -> str:
         return "Unable to perform Google search at this time."
 
 
+def execute_firecrawl(url: str, prompt: str = None) -> str:
+    """Execute a Firecrawl web extraction"""
+    try:
+        from firecrawl import Crawler
+        crawler = Crawler()
+        
+        if prompt:
+            return crawler.extract_with_prompt(url, prompt)
+        else:
+            return crawler.extract_content(url)
+    except Exception as e:
+        st.error(f"Firecrawl error: {str(e)}")
+        return "Unable to extract webpage content at this time."
+
 def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute the requested tool with the given input"""
     try:
         # Validate required parameters
-        if tool_name in ["duckduckgo_search", "serpapi_search"]:
+        if tool_name == "firecrawl":
+            if "url" not in tool_args:
+                return {
+                    "error": "Missing required 'url' parameter",
+                    "is_error": True
+                }
+            return execute_firecrawl(tool_args["url"], tool_args.get("prompt"))
+            
+        elif tool_name in ["duckduckgo_search", "serpapi_search"]:
             if "query" not in tool_args:
                 return {
                     "error": "Missing required 'query' parameter",
