@@ -363,33 +363,31 @@ def get_assistant_response(
     1. Analyze which tool would be most appropriate for the query
     2. Check if you have all required parameters or can reasonably infer them
     3. If any required parameters are missing, ask the user instead of guessing
-    4. Only proceed with the tool call if you have all needed information
-    
-    Do not reflect on search result quality using <search_quality_reflection> tags."""
+    4. Only proceed with the tool call if you have all needed information"""
 
     if relevant_memories:
         system_message += (
             "\n\nRelevant memories from previous conversations:\n" + relevant_memories
         )
 
-    # Format messages for the API
-    messages = []
-
-    # Add historical context
-    for msg in history:
-        role = "assistant" if msg["role"] == "assistant" else "user"
-        messages.append({"role": role, "content": msg["content"]})
-
-    # Add current prompt
-    messages.append({"role": "user", "content": prompt})
-
     try:
+        # Format messages for the API
+        messages = []
+
+        # Add historical context
+        for msg in history:
+            role = "assistant" if msg["role"] == "assistant" else "user"
+            messages.append({"role": role, "content": msg["content"]})
+
+        # Add current prompt
+        messages.append({"role": "user", "content": prompt})
+
         # Get available search tools
         tools = get_search_tools() if include_web_search else []
 
         # Make initial request to Claude
-        response = anthropic.messages.create(
-            model="claude-3-5-sonnet-latest",
+        message = anthropic.messages.create(
+            model="claude-3-sonnet-20240229",
             max_tokens=4000,
             system=system_message,
             messages=messages,
@@ -397,43 +395,49 @@ def get_assistant_response(
             temperature=0.5,
         )
 
-        # Handle tool calls in a loop
-        while True:
-            # Check if the last message contains a tool call
-            last_message = response.content[-1]
+        if message.stop_reason == "tool_use":
+            # Get the tool use block
+            tool_use = next(block for block in message.content if block.type == "tool_use")
+            tool_name = tool_use.name
+            tool_args = tool_use.input
 
-            if last_message.type == "text":
-                # No tool calls, return the final text response
-                final_response = last_message.text
-                break
-            elif last_message.type == "tool_use":
-                # Process tool use request
-                tool_name = last_message.name
-                tool_args = last_message.input
+            # Execute the tool
+            tool_result = execute_tool(tool_name, tool_args)
+            
+            # Convert tool result to string if it's a dict
+            if isinstance(tool_result, dict):
+                tool_result = json.dumps(tool_result)
 
-                # Execute the tool once
-                tool_result = execute_tool(tool_name, tool_args)
-                
-                # Convert tool result to string if it's a dict
-                if isinstance(tool_result, dict):
-                    tool_result = json.dumps(tool_result)
-
-                # Add the tool result to messages once
-                messages.append({
-                    "role": "tool",
-                    "content": tool_result,
-                    "tool_call_id": last_message.id,
-                })
-
-            # Get next response from Claude with tool results
+            # Make follow-up request with tool result
             response = anthropic.messages.create(
-                model="claude-3-5-sonnet-latest",
+                model="claude-3-sonnet-20240229",
                 max_tokens=4000,
+                messages=[
+                    *messages,  # Original messages
+                    {"role": "assistant", "content": message.content},  # Claude's first response
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": tool_use.id,
+                                "content": tool_result,
+                            }
+                        ],
+                    },
+                ],
                 system=system_message,
-                messages=messages,
                 tools=tools,
                 temperature=0.5,
             )
+        else:
+            response = message
+
+        # Get the final text response
+        final_response = next(
+            (block.text for block in response.content if hasattr(block, "text")),
+            None,
+        )
 
         # Store important information in memory
         st.session_state.memory_manager.add_memory(
