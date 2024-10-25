@@ -347,7 +347,8 @@ def save_chat_history(messages):
 
 
 def get_assistant_response(
-    prompt: str, history: List[Dict], include_web_search: bool = True
+    prompt: str, history: List[Dict], include_web_search: bool = True, 
+    progress_callback=None
 ):
     """Get response from Claude API with memory and web search integration"""
     # Get relevant memories
@@ -386,6 +387,9 @@ def get_assistant_response(
         tools = get_search_tools() if include_web_search else []
 
         # Make initial request to Claude
+        if progress_callback:
+            progress_callback("Making initial request to Claude")
+            
         message = anthropic.messages.create(
             model="claude-3-sonnet-20240229",
             max_tokens=4000,
@@ -402,13 +406,22 @@ def get_assistant_response(
             tool_args = tool_use.input
 
             # Execute the tool
+            if progress_callback:
+                progress_callback(f"Executing tool: {tool_name}", tool_args)
+            
             tool_result = execute_tool(tool_name, tool_args)
+            
+            if progress_callback:
+                progress_callback("Tool execution complete", tool_result)
             
             # Convert tool result to string if it's a dict
             if isinstance(tool_result, dict):
                 tool_result = json.dumps(tool_result)
 
             # Make follow-up request with tool result
+            if progress_callback:
+                progress_callback("Making follow-up request to Claude with tool results")
+                
             response = anthropic.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=4000,
@@ -498,13 +511,26 @@ with col1:
 
         # Get and display assistant response
         with st.chat_message("assistant"):
+            response_placeholder = st.empty()
+            progress_expander = st.expander("View Progress", expanded=False)
+            
+            with progress_expander:
+                progress_placeholder = st.empty()
+                
             with st.spinner("Thinking..."):
+                def progress_callback(action, details=None):
+                    with progress_placeholder.container():
+                        st.write(f"🔄 {action}")
+                        if details:
+                            st.code(details, language="json")
+                
                 response = get_assistant_response(
                     prompt,
                     st.session_state.messages[:-1],
                     st.session_state.include_web_search,
+                    progress_callback
                 )
-                st.markdown(response)
+                response_placeholder.markdown(response)
 
         # Add assistant response to state
         st.session_state.messages.append({"role": "assistant", "content": response})
