@@ -123,14 +123,14 @@ def perform_web_search(query: str, num_results: int = 3) -> str:
         formatted_results = []
         for result in results:
             # Safely get dictionary values with fallbacks
-            title = result.get('title', 'No title available')
-            link = result.get('link', 'No link available')
-            snippet = result.get('body', 'No snippet available')
-            
+            title = result.get("title", "No title available")
+            link = result.get("link", "No link available")
+            snippet = result.get("body", "No snippet available")
+
+            print(f"Title: {title}\nLink: {link}\nSnippet: {snippet}\n")
+
             formatted_results.append(
-                f"Title: {title}\n"
-                f"Link: {link}\n"
-                f"Snippet: {snippet}\n"
+                f"Title: {title}\n" f"Link: {link}\n" f"Snippet: {snippet}\n"
             )
 
         return "\n\n".join(formatted_results)
@@ -224,7 +224,10 @@ def get_assistant_response(
         )
 
     if web_search_results:
-        system_message += "\n\nRECENT WEB SEARCH RESULTS (Please use these to inform your response):\n" + web_search_results
+        system_message += (
+            "\n\nRECENT WEB SEARCH RESULTS (Please use these to inform your response):\n"
+            + web_search_results
+        )
 
     # Format messages for the API
     messages = []
@@ -239,7 +242,7 @@ def get_assistant_response(
 
     try:
         response = anthropic.messages.create(
-            model="claude-3-opus-20240229",
+            model="claude-3-5-sonnet-latest",
             max_tokens=4000,
             system=system_message,  # System message passed separately
             messages=messages,

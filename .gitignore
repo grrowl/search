@@ -43,3 +43,4 @@ chat_history.json
 .coverage
 htmlcov/
 .pytest_cache/
+.aider*
