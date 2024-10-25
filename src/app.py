@@ -33,8 +33,8 @@ class MemoryManager:
         self.memories: List[Dict] = []
         self.load_memories()
 
-    def add_memory(self, content: str, importance: float = 1.0):
-        """Add a new memory with timestamp and importance score"""
+    def add_memory(self, content: str, importance: float = 1.0, metadata: dict = None):
+        """Add a new memory with timestamp, importance score and metadata"""
         memory = {
             "id": len(self.memories),
             "content": content,
@@ -42,6 +42,7 @@ class MemoryManager:
             "importance": importance,
             "tokens": len(tokenizer.encode(content)),
             "votes": 0,
+            "metadata": metadata or {}
         }
         self.memories.append(memory)
         self.save_memories()
@@ -115,6 +116,39 @@ class MemoryManager:
 def get_search_tools():
     """Get the available search tools based on configuration"""
     tools = [
+        {
+            "name": "memory_manager",
+            "description": """Manage long-term memory storage. Store new memories, update existing ones, or search memories.""",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["store", "update", "search"],
+                        "description": "Action to perform on memories"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Content to store or search for"
+                    },
+                    "importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 2.0,
+                        "description": "Importance rating (0.0-2.0)"
+                    },
+                    "memory_id": {
+                        "type": "integer",
+                        "description": "ID of memory to update (for update action)"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Reason for importance rating or update"
+                    }
+                },
+                "required": ["action", "content"]
+            }
+        },
         {
             "name": "visit",
             "description": """Read a webpage's content. Returns clean, readable text.
@@ -290,8 +324,48 @@ def execute_firecrawl(url: str, prompt: str = None) -> str:
 def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute the requested tool with the given input"""
     try:
-        # Validate required parameters
-        if tool_name == "visit":
+        if tool_name == "memory_manager":
+            action = tool_args.get("action")
+            content = tool_args.get("content")
+            
+            if action == "store":
+                importance = tool_args.get("importance", 1.0)
+                reason = tool_args.get("reason", "")
+                st.session_state.memory_manager.add_memory(
+                    content, 
+                    importance=importance,
+                    metadata={"reason": reason}
+                )
+                return f"Memory stored with importance {importance}"
+                
+            elif action == "update":
+                memory_id = tool_args.get("memory_id")
+                importance = tool_args.get("importance")
+                if memory_id is None:
+                    return {"error": "memory_id required for update action", "is_error": True}
+                    
+                for memory in st.session_state.memory_manager.memories:
+                    if memory["id"] == memory_id:
+                        memory["content"] = content
+                        if importance:
+                            memory["importance"] = importance
+                        st.session_state.memory_manager.save_memories()
+                        return f"Memory {memory_id} updated"
+                return f"Memory {memory_id} not found"
+                
+            elif action == "search":
+                matches = []
+                for memory in st.session_state.memory_manager.memories:
+                    if content.lower() in memory["content"].lower():
+                        matches.append(
+                            f"ID {memory['id']}: {memory['content']} "
+                            f"(importance: {memory['importance']})"
+                        )
+                return "\n\n".join(matches) if matches else "No matching memories found"
+                
+            return {"error": f"Unknown memory action: {action}", "is_error": True}
+            
+        elif tool_name == "visit":
             if "url" not in tool_args:
                 return {"error": "Missing required 'url' parameter", "is_error": True}
             return execute_firecrawl(tool_args["url"], tool_args.get("prompt"))
@@ -401,7 +475,20 @@ def get_assistant_response(
     system_message = """You are a helpful AI assistant with memory and web access.
     Use <thinking></thinking> tags to explain your tool choices.
     Ask for clarification if needed.
-    Always cite your sources."""
+    Always cite your sources.
+    
+    You can manage memories using the memory_manager tool:
+    - Store important information for future reference
+    - Update existing memories when new information is available
+    - Search memories for relevant context
+    
+    When storing memories:
+    - Focus on factual, reusable information
+    - Rate importance from 0.0-2.0 based on:
+      - Long-term relevance
+      - Factual accuracy
+      - General usefulness
+    - Explain your reasoning for importance ratings"""
 
     if relevant_memories:
         system_message += (
