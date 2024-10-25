@@ -210,7 +210,7 @@ def get_search_tools():
                             "type": "integer",
                             "description": "Number of search results to return (1-15, default 5)",
                             "default": 5,
-                            "minimum": 1, 
+                            "minimum": 1,
                             "maximum": 15,
                         },
                     },
@@ -369,7 +369,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
             if "query" not in tool_args:
                 return {"error": "Missing required 'query' parameter", "is_error": True}
 
-            # Get and validate num_results 
+            # Get and validate num_results
             num_results = tool_args.get("num_results", 5)
             num_results = min(max(num_results, 1), 15)
             query = tool_args["query"]
@@ -539,7 +539,7 @@ When storing memories, capture verified information with citations. Rate importa
 - Relevance to user's context (is this useful context for the future?)
 - Citation quality (are sources authoritative and current?)
 
-You MUST include markdown footnote citations for all factual claims. When you encounter any entity, assign them short, unique identifiers as subscripts$_{like this}$. Include short editorial notes and shorthand self-thought in superscript markers$^{like this}$. If sources conflict or information is ambiguous, immediately ask the user for clarification."""
+You MUST include markdown footnote citations for all factual claims. When you encounter any entity, assign them short, unique identifiers as subscripts$_{like_this}$. Include very short editorial notes in superscript markers$^{like_this}$.  You may include footnoted regarding self-thought or longer editorial notes. If sources conflict or information is ambiguous, immediately ask the user for clarification."""
 
     if relevant_memories:
         system_message += (
@@ -668,7 +668,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Main chat interface - Title at the top
-st.title("Claude Chat Assistant")
+st.title("search.tommckenzie.dev")
 
 # Chat input must be at root level
 prompt = st.chat_input("What would you like to know?")
