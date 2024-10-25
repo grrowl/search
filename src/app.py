@@ -152,12 +152,12 @@ def get_search_tools():
         {
             "name": "visit",
             "description": """Read a webpage's content. Returns clean, readable text.
-            Optional prompt to extract specific details.""",
+            Optional extraction guidance to efficiently grab specific details.""",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "url": {"type": "string", "description": "Webpage URL to read"},
-                    "prompt": {
+                    "extract": {
                         "type": "string",
                         "description": "Optional: describe the specific information to extract from the webpage",
                     },
@@ -354,7 +354,6 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                         return f"Memory {memory_id} updated"
                 return f"Memory {memory_id} not found"
 
-
             return {"error": f"Unknown memory action: {action}", "is_error": True}
 
         elif tool_name == "visit":
@@ -464,30 +463,29 @@ def get_assistant_response(
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
 
     # Print relevant memories for debugging
-    if relevant_memories:
-        st.write("Found relevant memories:")
-        st.write(relevant_memories)
-    else:
-        st.write("No relevant memories found")
+    # if relevant_memories:
+    #     st.write("Found relevant memories:")
+    #     st.write(relevant_memories)
+    # else:
+    #     st.write("No relevant memories found")
 
     # Construct system message with context and chain-of-thought prompting
     system_message = """You are a helpful AI assistant with memory and web access.
-    Use <thinking></thinking> tags to explain your tool choices.
-    Ask for clarification if needed.
-    Always cite your sources.
+Ask for clarification if needed.
+Always cite your sources, including your own innate knowledge.
 
-    You can manage memories using the memory_manager tool:
-    - Store important contextual information for future reference
-    - Update existing memories when new information is available
-    - Search memories for relevant context
+Use the memory_manager tool to manage memories:
+- Store important contextual information for future reference
+- Update existing memories when new information is available
+- Search memories for relevant context
 
-    When storing memories:
-    - Focus on factual, reusable information
-    - Rate importance from 0.0-2.0 based on:
-      - Long-term relevance
-      - Factual accuracy
-      - General usefulness
-    - Explain your reasoning for importance ratings"""
+When storing memories:
+- Focus on factual, reusable information
+- Rate importance from 0.0-2.0 based on:
+    - Long-term relevance
+    - Factual accuracy
+    - General usefulness
+- Explain your reasoning for importance ratings"""
 
     if relevant_memories:
         system_message += (
@@ -651,13 +649,16 @@ with col1:
 
                 # Clear previous progress updates
                 st.session_state.progress_updates = []
-                
+
                 def progress_callback(action, details=None):
-                    update = {"action": f"🔄 {action}", "timestamp": datetime.now().isoformat()}
+                    update = {
+                        "action": f"🔄 {action}",
+                        "timestamp": datetime.now().isoformat(),
+                    }
                     if details:
                         update["details"] = details
                     st.session_state.progress_updates.append(update)
-                    
+
                     # Display all updates in chronological order
                     with progress_placeholder.container():
                         for update in st.session_state.progress_updates:
