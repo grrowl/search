@@ -455,32 +455,37 @@ def save_chat_history(messages):
 class ToolUsageCounter:
     def __init__(self):
         self.reset()
-    
+
     def reset(self):
         self.thought_count = 0
         self.search_count = 0
         self.visit_count = 0
-        
+
     def count_tool(self, tool_name: str):
-        if tool_name in ['search', 'google_search']:
+        if tool_name in ["search", "google_search"]:
             self.search_count += 1
-        elif tool_name == 'visit':
+        elif tool_name == "visit":
             self.visit_count += 1
         self.thought_count += 1
-    
+
     def get_summary(self) -> str:
         parts = []
         if self.thought_count > 0:
             parts.append(f"Thought {self.thought_count} times")
         if self.search_count > 0:
-            parts.append(f"performed {self.search_count} search{'' if self.search_count == 1 else 'es'}")
+            parts.append(
+                f"performed {self.search_count} search{'' if self.search_count == 1 else 'es'}"
+            )
         if self.visit_count > 0:
-            parts.append(f"made {self.visit_count} visit{'' if self.visit_count == 1 else 's'}")
-        
+            parts.append(
+                f"made {self.visit_count} visit{'' if self.visit_count == 1 else 's'}"
+            )
+
         if not parts:
             return "No tools used"
-            
+
         return ", ".join(parts)
+
 
 def get_assistant_response(
     prompt: str,
@@ -500,23 +505,20 @@ def get_assistant_response(
     #     st.write("No relevant memories found")
 
     # Construct system message with context and chain-of-thought prompting
-    system_message = """You are friendly, thorough, and thoughtful. Cut through complexity by actively pursuing knowledge and connecting key insights.
+    system_message = """You are a focused, factual researcher. You systematically investigate topics while keeping discussions within scope and relevant.
 
-You break down complex questions into smaller investigative steps. With your tools, you:
-- Search the web for current facts and cross-reference multiple sources
-- Store key insights in memory when they'll be helpful for future conversations
-- Read linked pages fully to validate and expand on search results
+You derive information exclusively from source data and cite everything using markdown footnotes. With your tools, you:
+- Identify key questions and resolve any ambiguity by asking for clarification
+- Search multiple sources in parallel to cross-validate information
+- Visit pages efficiently to extract relevant data, always citing the source
+- Focus searches and visits based on the precise scope of the user's query
 
-When storing memories, capture concrete, reusable information. Rate importance on a 0.0-2.0 scale based on:
-- Broad applicability (will this help many future conversations?)
-- Validated accuracy (is this verified by multiple reliable sources?)
-- Enduring value (will this information stay relevant long-term?)
+When storing memories, capture verified information with citations. Rate importance on a 0.0-2.0 scale based on:
+- Supporting evidence (is this fact directly cited from reliable sources?)
+- Relevance to user's context (is this useful context for the future?)
+- Citation quality (are sources authoritative and current?)
 
-Take multiple turns with tools to:
-1. Start broad to identify key topics and sources
-2. Read deeply into the most promising leads
-3. Search again with refined queries based on what you learn
-4. Connect and synthesize insights across sources"""
+You MUST include markdown footnote citations for all factual claims. If sources conflict or information is ambiguous, immediately ask the user for clarification."""
 
     if relevant_memories:
         system_message += (
@@ -554,7 +556,9 @@ Take multiple turns with tools to:
         # Process any tool calls recursively
         while response.stop_reason == "tool_use":
             # Get the tool use block
-            tool_use = next(block for block in response.content if block.type == "tool_use")
+            tool_use = next(
+                block for block in response.content if block.type == "tool_use"
+            )
             tool_name = tool_use.name
             tool_args = tool_use.input
             tool_counter.count_tool(tool_name)
@@ -573,14 +577,18 @@ Take multiple turns with tools to:
 
             # Add tool result to messages and continue conversation
             messages.append({"role": "assistant", "content": response.content})
-            messages.append({
-                "role": "user", 
-                "content": [{
-                    "type": "tool_result",
-                    "tool_use_id": tool_use.id,
-                    "content": tool_result
-                }]
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": tool_use.id,
+                            "content": tool_result,
+                        }
+                    ],
+                }
+            )
 
             # Make another request with the tool result
             if progress_callback:
