@@ -512,12 +512,11 @@ with col1:
         # Get and display assistant response
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
-            progress_expander = st.expander("View Progress", expanded=False)
-            
-            with progress_expander:
-                progress_placeholder = st.empty()
-                
             with st.spinner("Thinking..."):
+                progress_expander = st.expander("View Progress", expanded=False)
+                with progress_expander:
+                    progress_placeholder = st.empty()
+                
                 def progress_callback(action, details=None):
                     with progress_placeholder.container():
                         st.write(f"🔄 {action}")
