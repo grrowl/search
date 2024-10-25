@@ -206,10 +206,10 @@ def get_search_tools():
                         },
                         "num_results": {
                             "type": "integer",
-                            "description": "Number of search results to return (default 3, max 10)",
-                            "default": 3,
+                            "description": "Number of search results to return (default 5, max 15)",
+                            "default": 5,
                             "minimum": 1,
-                            "maximum": 10,
+                            "maximum": 15,
                         },
                     },
                     "required": ["query"],
@@ -368,7 +368,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                 return {"error": "Missing required 'query' parameter", "is_error": True}
 
             # Validate and constrain num_results
-            num_results = min(max(tool_args.get("num_results", 3), 1), 10)
+            num_results = min(max(tool_args.get("num_results", 5), 1), 15)
             query = tool_args["query"]
 
             if tool_name == "search":
