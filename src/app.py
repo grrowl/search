@@ -117,17 +117,26 @@ def perform_web_search(query: str, num_results: int = 3) -> str:
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=num_results))
 
+        if not results:
+            return "No search results found."
+
         formatted_results = []
         for result in results:
+            # Safely get dictionary values with fallbacks
+            title = result.get('title', 'No title available')
+            link = result.get('link', 'No link available')
+            snippet = result.get('body', 'No snippet available')
+            
             formatted_results.append(
-                f"Title: {result['title']}\n"
-                f"Link: {result['link']}\n"
-                f"Snippet: {result['body']}\n"
+                f"Title: {title}\n"
+                f"Link: {link}\n"
+                f"Snippet: {snippet}\n"
             )
 
         return "\n\n".join(formatted_results)
     except Exception as e:
-        return f"Error performing web search: {str(e)}"
+        st.error(f"Search error: {str(e)}")
+        return "Unable to perform web search at this time."
 
 
 # Initialize memory manager
