@@ -42,7 +42,7 @@ class MemoryManager:
             "importance": importance,
             "tokens": len(tokenizer.encode(content)),
             "votes": 0,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
         self.memories.append(memory)
         self.save_memories()
@@ -125,29 +125,29 @@ def get_search_tools():
                     "action": {
                         "type": "string",
                         "enum": ["store", "update", "search"],
-                        "description": "Action to perform on memories"
+                        "description": "Action to perform on memories",
                     },
                     "content": {
                         "type": "string",
-                        "description": "Content to store or search for"
+                        "description": "Content to store or search for",
                     },
                     "importance": {
                         "type": "number",
                         "minimum": 0.0,
                         "maximum": 2.0,
-                        "description": "Importance rating (0.0-2.0)"
+                        "description": "Importance rating (0.0-2.0)",
                     },
                     "memory_id": {
                         "type": "integer",
-                        "description": "ID of memory to update (for update action)"
+                        "description": "ID of memory to update (for update action)",
                     },
                     "reason": {
                         "type": "string",
-                        "description": "Reason for importance rating or update"
-                    }
+                        "description": "Reason for importance rating or update",
+                    },
                 },
-                "required": ["action", "content"]
-            }
+                "required": ["action", "content"],
+            },
         },
         {
             "name": "visit",
@@ -164,7 +164,7 @@ def get_search_tools():
                 },
                 "required": ["url"],
             },
-        }
+        },
     ]
 
     # Add the selected search provider
@@ -327,23 +327,24 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
         if tool_name == "memory_manager":
             action = tool_args.get("action")
             content = tool_args.get("content")
-            
+
             if action == "store":
                 importance = tool_args.get("importance", 1.0)
                 reason = tool_args.get("reason", "")
                 st.session_state.memory_manager.add_memory(
-                    content, 
-                    importance=importance,
-                    metadata={"reason": reason}
+                    content, importance=importance, metadata={"reason": reason}
                 )
                 return f"Memory stored with importance {importance}"
-                
+
             elif action == "update":
                 memory_id = tool_args.get("memory_id")
                 importance = tool_args.get("importance")
                 if memory_id is None:
-                    return {"error": "memory_id required for update action", "is_error": True}
-                    
+                    return {
+                        "error": "memory_id required for update action",
+                        "is_error": True,
+                    }
+
                 for memory in st.session_state.memory_manager.memories:
                     if memory["id"] == memory_id:
                         memory["content"] = content
@@ -352,7 +353,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                         st.session_state.memory_manager.save_memories()
                         return f"Memory {memory_id} updated"
                 return f"Memory {memory_id} not found"
-                
+
             elif action == "search":
                 matches = []
                 for memory in st.session_state.memory_manager.memories:
@@ -362,9 +363,9 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                             f"(importance: {memory['importance']})"
                         )
                 return "\n\n".join(matches) if matches else "No matching memories found"
-                
+
             return {"error": f"Unknown memory action: {action}", "is_error": True}
-            
+
         elif tool_name == "visit":
             if "url" not in tool_args:
                 return {"error": "Missing required 'url' parameter", "is_error": True}
@@ -471,17 +472,24 @@ def get_assistant_response(
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
 
+    # Print relevant memories for debugging
+    if relevant_memories:
+        st.write("Found relevant memories:")
+        st.write(relevant_memories)
+    else:
+        st.write("No relevant memories found")
+
     # Construct system message with context and chain-of-thought prompting
     system_message = """You are a helpful AI assistant with memory and web access.
     Use <thinking></thinking> tags to explain your tool choices.
     Ask for clarification if needed.
     Always cite your sources.
-    
+
     You can manage memories using the memory_manager tool:
-    - Store important information for future reference
+    - Store important contextual information for future reference
     - Update existing memories when new information is available
     - Search memories for relevant context
-    
+
     When storing memories:
     - Focus on factual, reusable information
     - Rate importance from 0.0-2.0 based on:
@@ -583,11 +591,11 @@ def get_assistant_response(
             None,
         )
 
-        # Store important information in memory
-        st.session_state.memory_manager.add_memory(
-            f"User asked: {prompt}\nAssistant responded: {final_response}",
-            importance=1.0,
-        )
+        # Store recent questions information in memory
+        # st.session_state.memory_manager.add_memory(
+        #     f"User asked: {prompt}\nAssistant responded: {final_response}",
+        #     importance=1.0,
+        # )
 
         return final_response
 
