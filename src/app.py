@@ -193,7 +193,6 @@ def get_assistant_response(
     prompt: str, history: List[Dict], include_web_search: bool = True
 ):
     """Get response from Claude API with memory and web search integration"""
-    messages = []
 
     # Get relevant memories
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
@@ -215,7 +214,8 @@ def get_assistant_response(
     if web_search_results:
         system_message += "\n\nRecent web search results:\n" + web_search_results
 
-    messages.append({"role": "system", "content": system_message})
+    # Format messages for the API
+    messages = []
 
     # Add historical context
     for msg in history:
@@ -227,19 +227,20 @@ def get_assistant_response(
 
     try:
         response = anthropic.messages.create(
-            model="claude-3-5-sonnet-latest",
+            model="claude-3-opus-20240229",
             max_tokens=4000,
+            system=system_message,  # System message passed separately
             messages=messages,
             temperature=0.7,
         )
 
         # Store important information in memory
         st.session_state.memory_manager.add_memory(
-            f"User asked: {prompt}\nAssistant responded: {response.content[0].value}",
+            f"User asked: {prompt}\nAssistant responded: {response.content[0].text}",
             importance=1.0,
         )
 
-        return response.content[0].value
+        return response.content[0].text
     except Exception as e:
         return f"Error: {str(e)}"
 
