@@ -411,33 +411,19 @@ def get_assistant_response(
                 tool_name = last_message.name
                 tool_args = last_message.input
 
-                # Execute the tool
+                # Execute the tool once
                 tool_result = execute_tool(tool_name, tool_args)
+                
+                # Convert tool result to string if it's a dict
+                if isinstance(tool_result, dict):
+                    tool_result = json.dumps(tool_result)
 
-                # Add the tool result to messages
-                messages.append(
-                    {
-                        "role": "tool",
-                        "content": tool_result,
-                        "tool_call_id": last_message.id,
-                    }
-                )
-
-                # Execute the tool
-                tool_result = execute_tool(tool_name, json.loads(tool_args))
-
-                # Add the tool result to messages
-                # Execute the tool and continue the conversation
-                tool_result = execute_tool(tool_name, tool_args)
-
-                # Add the tool result to messages
-                messages.append(
-                    {
-                        "role": "tool",
-                        "content": tool_result,
-                        "tool_call_id": last_message.id,
-                    }
-                )
+                # Add the tool result to messages once
+                messages.append({
+                    "role": "tool",
+                    "content": tool_result,
+                    "tool_call_id": last_message.id,
+                })
 
             # Get next response from Claude with tool results
             response = anthropic.messages.create(
