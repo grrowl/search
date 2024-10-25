@@ -370,7 +370,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
             num_results = min(max(tool_args.get("num_results", 3), 1), 10)
             query = tool_args["query"]
 
-            if tool_name == "duckduckgo_search":
+            if tool_name == "search":
                 try:
                     return execute_duckduckgo_search(query, num_results)
                 except Exception as e:
@@ -378,7 +378,7 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
                         "error": f"DuckDuckGo search failed: {str(e)}",
                         "is_error": True,
                     }
-            elif tool_name == "serpapi_search":
+            elif tool_name == "google_search":
                 try:
                     return execute_serpapi_search(query, num_results)
                 except Exception as e:
