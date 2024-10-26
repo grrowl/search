@@ -3,8 +3,9 @@ from anthropic import Anthropic
 import json
 from datetime import datetime
 import os
-from duckduckgo_search import DDGS
-from serpapi import GoogleSearch
+from search.providers.duckduckgo import execute_duckduckgo_search
+from search.providers.serpapi import execute_serpapi_search
+from search.providers.firecrawl import execute_firecrawl
 from typing import List, Dict
 import pandas as pd
 from dotenv import load_dotenv
