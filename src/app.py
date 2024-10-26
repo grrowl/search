@@ -29,11 +29,13 @@ tokenizer = tiktoken.encoding_for_model("gpt-4")
 
 
 
-def get_search_tools():
-    """Get the available search tools based on configuration"""
+from search import get_search_tools, execute_tool
+
+def get_available_tools():
+    """Get all available tools based on configuration"""
     tools = [
         {
-            "name": "memory_manager",
+            "name": "memory_manager", 
             "description": """Manage long-term memory storage. Store new memories, update existing ones, or search memories.""",
             "input_schema": {
                 "type": "object",
@@ -136,107 +138,6 @@ def get_search_tools():
     return tools
 
 
-def execute_duckduckgo_search(query: str, num_results: int) -> str:
-    """Execute a DuckDuckGo search"""
-    try:
-        with DDGS() as ddgs:
-            results = list(
-                ddgs.text(
-                    query,
-                    max_results=num_results,
-                    region="wt-wt",
-                    safesearch="moderate",
-                )
-            )
-
-        if not results:
-            return "No search results found."
-
-        formatted_results = []
-        for i, result in enumerate(results, 1):
-            formatted_results.append(
-                f"[Result {i}]\n"
-                f"Title: {result.get('title', 'No title')}\n"
-                f"URL: {result.get('link') or result.get('url', 'No URL')}\n"
-                f"Description: {result.get('body', 'No description')}\n"
-                f"Published: {result.get('published', 'Date unknown')}\n"
-            )
-
-        return "\n\n".join(formatted_results)
-    except Exception as e:
-        st.error(f"DuckDuckGo search error: {str(e)}")
-        return "Unable to perform DuckDuckGo search at this time."
-
-
-def execute_serpapi_search(query: str, num_results: int) -> str:
-    """Execute a Google search via SerpAPI"""
-    try:
-        params = {
-            "q": query,
-            "num": num_results,
-            "api_key": os.getenv("SERPAPI_KEY"),
-            "hl": "en",
-            "gl": "us",
-            "safe": "active",
-        }
-        search = GoogleSearch(params)
-        results = search.get_dict()
-
-        if "error" in results:
-            return f"SerpAPI error: {results['error']}"
-
-        organic_results = results.get("organic_results", [])
-        if not organic_results:
-            return "No search results found."
-
-        formatted_results = []
-        for i, result in enumerate(organic_results[:num_results], 1):
-            formatted_results.append(
-                f"[Result {i}]\n"
-                f"Title: {result.get('title', 'No title')}\n"
-                f"URL: {result['link']}\n"
-                f"Description: {result.get('snippet', 'No description')}\n"
-                f"Position: {result.get('position', 'Unknown')}\n"
-                f"Displayed URL: {result.get('displayed_link', 'No URL')}\n"
-            )
-
-            if "rich_snippet" in result:
-                rich = result["rich_snippet"]
-                if "top" in rich:
-                    formatted_results[-1] += f"Additional Info: {rich['top']}\n"
-
-        return "\n\n".join(formatted_results)
-    except Exception as e:
-        st.error(f"SerpAPI search error: {str(e)}")
-        return "Unable to perform Google search at this time."
-
-
-def execute_firecrawl(url: str, prompt: str = None) -> str:
-    """Execute a Firecrawl web extraction"""
-    try:
-        from firecrawl import FirecrawlApp
-
-        app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
-
-        params = {"formats": ["markdown"]}
-
-        if prompt:
-            params["formats"].append("extract")
-            params["extract"] = {"prompt": prompt}
-
-        result = app.scrape_url(url, params=params)
-
-        # Return markdown content by default
-        content = result.get("markdown", "")
-
-        # If extraction was requested, append it to the content
-        if prompt and "extract" in result:
-            content += "\n\nExtracted Information:\n" + str(result["extract"])
-
-        return content
-    except Exception as e:
-        st.error(f"Firecrawl error: {str(e)}")
-        return "Unable to extract webpage content at this time."
 
 
 def execute_tool(tool_name: str, tool_args: dict) -> str:
