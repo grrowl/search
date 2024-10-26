@@ -3,9 +3,9 @@ from anthropic import Anthropic
 import json
 from datetime import datetime
 import os
-from search.providers.duckduckgo import execute_duckduckgo_search
-from search.providers.serpapi import execute_serpapi_search
-from search.providers.firecrawl import execute_firecrawl
+from grrowl_search.providers.duckduckgo import execute_duckduckgo_search
+from grrowl_search.providers.serpapi import execute_serpapi_search
+from grrowl_search.providers.firecrawl import execute_firecrawl
 from typing import List, Dict
 import pandas as pd
 from dotenv import load_dotenv
@@ -29,7 +29,7 @@ anthropic = Anthropic(api_key=api_key)
 tokenizer = tiktoken.encoding_for_model("gpt-4")
 
 
-from search import get_tools, execute_tool
+from grrowl_search.search import get_tools, execute_tool
 
 
 def get_available_tools():
@@ -256,12 +256,12 @@ def display_memories():
                     st.rerun()  # Updated from experimental_rerun()
 
 
-from chat import (
+from grrowl_search.chat import (
     load_chat_history,
     save_chat_history,
     get_assistant_response,
 )
-from search.tools import get_tools
+from grrowl_search.tools import get_tools
 
 
 # [Previous imports and class definitions remain the same until the Page config section]
