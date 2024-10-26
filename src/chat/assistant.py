@@ -1,8 +1,9 @@
 from typing import List, Dict, Callable
 from anthropic import Anthropic
 import json
+import os
 import streamlit as st
-from ..search import get_search_tools
+from ..search import get_search_tools, execute_tool
 from ..memory import ToolUsageCounter
 
 def get_assistant_response(
