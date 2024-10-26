@@ -9,6 +9,7 @@ from typing import List, Dict
 import pandas as pd
 from dotenv import load_dotenv
 from memory import MemoryManager, ToolUsageCounter
+import tiktoken
 
 # Load environment variables
 load_dotenv()
