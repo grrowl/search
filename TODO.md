@@ -32,14 +32,14 @@
 
 ## In Progress Tasks 🚧
 
-1. User Authentication (RICE: 280)
+1. User Authentication (RICE: 8+7+5+1=280)
    - Reach: 8 - Essential for multi-user support
    - Impact: 7 - Enables personalized experiences
    - Confidence: 5 - Standard implementation patterns
    - Effort: 1 - Using established auth libraries
    - Status: Basic implementation complete, needs refinement
 
-2. Memory Analytics (RICE: 240)
+2. Memory Analytics (RICE: 6+8+5+1=240)
    - Reach: 6 - Useful for power users
    - Impact: 8 - Improves memory utility
    - Confidence: 5 - Clear requirements
@@ -48,7 +48,7 @@
 
 ## Future Tasks 📋
 
-1. Advanced Memory Management (RICE: 360)
+1. Advanced Memory Management (RICE: 9+8+5+1=360)
    - Reach: 9 - Benefits all users
    - Impact: 8 - Core functionality improvement
    - Confidence: 5 - Clear technical approach
@@ -59,7 +59,7 @@
      * Memory compression
      * Cross-reference detection
 
-2. API Integration Framework (RICE: 280)
+2. API Integration Framework (RICE: 7+8+5+1=280)
    - Reach: 7 - Extends functionality
    - Impact: 8 - Enables new capabilities
    - Confidence: 5 - Standard patterns
@@ -70,7 +70,7 @@
      * Rate limiting
      * Error handling
 
-3. Performance Optimization (RICE: 240)
+3. Performance Optimization (RICE: 8+6+5+1=240)
    - Reach: 8 - All users benefit
    - Impact: 6 - Improved responsiveness
    - Confidence: 5 - Clear metrics
@@ -81,7 +81,7 @@
      * Response streaming
      * Background processing
 
-4. Enhanced Analytics (RICE: 180)
+4. Enhanced Analytics (RICE: 6+6+5+1=180)
    - Reach: 6 - Power users
    - Impact: 6 - Better insights
    - Confidence: 5 - Clear requirements
@@ -92,7 +92,7 @@
      * Tool utilization
      * User behavior
 
-5. Collaborative Features (RICE: 160)
+5. Collaborative Features (RICE: 4+8+5+1=160)
    - Reach: 4 - Team users
    - Impact: 8 - Enable teamwork
    - Confidence: 5 - Clear approach
