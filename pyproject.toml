@@ -11,3 +11,11 @@ authors = [
 description = "AI Assistant with web search capabilities"
 readme = "README.md"
 requires-python = ">=3.8"
+dependencies = [
+    "streamlit",
+    "anthropic",
+    "python-dotenv",
+    "duckduckgo-search",
+    "tiktoken",
+    "pandas"
+]
