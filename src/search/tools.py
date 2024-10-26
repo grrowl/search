@@ -3,35 +3,39 @@ from .providers.duckduckgo import execute_duckduckgo_search
 from .providers.serpapi import execute_serpapi_search
 from .providers.firecrawl import execute_firecrawl
 
-def get_search_tools() -> List[Dict]:
+
+def get_tools() -> List[Dict]:
     """Get the available search tools based on configuration"""
     tools = []
-    
+
     # Add DuckDuckGo search
-    tools.append({
-        "name": "search",
-        "description": """Find information across the web. Returns titles, snippets and links. 
+    tools.append(
+        {
+            "name": "search",
+            "description": """Find information across the web. Returns titles, snippets and links.
         Use to research real-time and up-to-date information from anywhere on the internet.""",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The search query to send to DuckDuckGo. Should be specific and focused on the information needed.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to send to DuckDuckGo. Should be specific and focused on the information needed.",
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "Number of search results to return (1-15, default 5)",
+                        "default": 5,
+                        "minimum": 1,
+                        "maximum": 15,
+                    },
                 },
-                "num_results": {
-                    "type": "integer",
-                    "description": "Number of search results to return (1-15, default 5)",
-                    "default": 5,
-                    "minimum": 1,
-                    "maximum": 15,
-                },
+                "required": ["query"],
             },
-            "required": ["query"],
-        },
-    })
-    
+        }
+    )
+
     return tools
+
 
 def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute the requested search tool with the given input"""

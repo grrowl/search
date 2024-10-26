@@ -3,8 +3,9 @@ from anthropic import Anthropic
 import json
 import os
 import streamlit as st
-from ..search import get_search_tools, execute_tool
-from ..memory import ToolUsageCounter
+from search import get_tools, execute_tool
+from memory import ToolUsageCounter
+
 
 def get_assistant_response(
     prompt: str,
@@ -15,7 +16,7 @@ def get_assistant_response(
     """Get response from Claude API with memory and web search integration"""
     # Initialize tool counter
     tool_counter = ToolUsageCounter()
-    
+
     # Get relevant memories and count them
     relevant_memories = st.session_state.memory_manager.get_relevant_memories(prompt)
     memory_count = (
@@ -59,7 +60,7 @@ Always include a `---` before continuing to footnotes. You MUST include markdown
         api_key = st.secrets.get("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("No API key found. Please set ANTHROPIC_API_KEY.")
-        
+
         anthropic = Anthropic(api_key=api_key)
 
         # Format messages for the API
@@ -74,7 +75,7 @@ Always include a `---` before continuing to footnotes. You MUST include markdown
         messages.append({"role": "user", "content": prompt})
 
         # Get available search tools
-        tools = get_search_tools() if include_web_search else []
+        tools = get_tools() if include_web_search else []
 
         # Make request to Claude with tool calling enabled
         if progress_callback:
