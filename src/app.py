@@ -258,8 +258,8 @@ def display_memories():
                     st.rerun()  # Updated from experimental_rerun()
 
 
-from src.chat import load_chat_history, save_chat_history, get_assistant_response
-from src.search.tools import get_available_tools
+from search.chat import load_chat_history, save_chat_history, get_assistant_response
+from search.search.tools import get_available_tools
 
 
 
