@@ -29,14 +29,14 @@ anthropic = Anthropic(api_key=api_key)
 tokenizer = tiktoken.encoding_for_model("gpt-4")
 
 
+from search import get_tools, execute_tool
 
-from search import get_search_tools, execute_tool
 
 def get_available_tools():
     """Get all available tools based on configuration"""
     tools = [
         {
-            "name": "memory_manager", 
+            "name": "memory_manager",
             "description": """Manage long-term memory storage. Store new memories, update existing ones, or search memories.""",
             "input_schema": {
                 "type": "object",
@@ -137,8 +137,6 @@ def get_available_tools():
         )
 
     return tools
-
-
 
 
 def execute_tool(tool_name: str, tool_args: dict) -> str:
@@ -258,9 +256,12 @@ def display_memories():
                     st.rerun()  # Updated from experimental_rerun()
 
 
-from search.chat import load_chat_history, save_chat_history, get_assistant_response
-from search.search.tools import get_available_tools
-
+from chat import (
+    load_chat_history,
+    save_chat_history,
+    get_assistant_response,
+)
+from search.tools import get_tools
 
 
 # [Previous imports and class definitions remain the same until the Page config section]
