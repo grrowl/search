@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "search"
+version = "0.1.0"
+authors = [
+    { name = "Tom McKenzie" },
+]
+description = "AI Assistant with web search capabilities"
+readme = "README.md"
+requires-python = ">=3.8"
