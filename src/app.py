@@ -258,24 +258,9 @@ def display_memories():
                     st.rerun()  # Updated from experimental_rerun()
 
 
-def load_chat_history():
-    """Load chat history from file if it exists"""
-    try:
-        with open("chat_history.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
+from .chat import load_chat_history, save_chat_history, get_assistant_response
 
-
-def save_chat_history(messages):
-    """Save chat history to file"""
-    with open("chat_history.json", "w") as f:
-        json.dump(messages, f)
-
-
-
-
-def get_assistant_response(
+def get_available_tools(
     prompt: str,
     history: List[Dict],
     include_web_search: bool = True,
